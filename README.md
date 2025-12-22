@@ -398,3 +398,46 @@ MIT License - See [LICENSE](LICENSE) for details
 ---
 
 **Note**: This is a production infrastructure project showcasing real-world DevOps practices. All services run on a single Raspberry Pi 4B (Quad-Core + 8GB RAM) demonstrating efficient resource utilization and proper architectural patterns.
+
+# Rajiv Wallace Home Lab - Infrastructure as Code
+
+> **Enterprise-Grade DevOps on a Raspberry Pi 4B | $0 Software Cost | 100% Open Source**
+
+A complete Infrastructure as Code (IaC) solution for deploying and managing a production-ready homelab environment.
+
+## 💡 Project Philosophy
+
+This project was born from a desire to build a **professional-grade infrastructure** without the enterprise price tag. It serves as a proof-of-concept that with the right open-source tools and architectural discipline, you don't need expensive hardware or paid SaaS subscriptions to run a secure, scalable platform.
+
+- **Cost Efficiency**: Runs entirely on a single Raspberry Pi 4B using free, open-source software (OSS).
+- **Security First**: Implements "Zero Trust" principles within the LAN via Network Segmentation, Secrets Management (Vault), and strict Firewall rules.
+- **Portability**: Agnostic design. While currently on a Pi, the use of Ansible, Terraform, and Docker means this entire stack can migrate to a Mini PC, VM, or Cloud instance in minutes.
+- **Automation**: No manual config edits. If it's not in code (Git), it doesn't exist.
+
+## 🏗️ Architecture Overview
+
+The system uses a **Centralized Service Architecture**. Unlike typical Docker setups where every app has its own database, this project mimics enterprise environments by utilizing shared, high-availability core services to reduce resource overhead.
+
+```mermaid
+graph TD
+    subgraph Host [Raspberry Pi 4B / DietPi]
+        NPM[Nginx Proxy Manager] -->|Routing| V[Vault]
+        NPM -->|Routing| J[Jenkins]
+        NPM -->|Routing| P[Portainer]
+        NPM -->|Routing| G[Grafana]
+
+        subgraph "Core Services"
+            V[HashiCorp Vault] ---|Secrets| Apps
+            DB[(Postgres Core)] ---|Central DB| Apps
+            Prom[Prometheus] ---|Metrics| Apps
+        end
+
+        subgraph "Applications"
+            Apps[Portfolio & Trivia]
+            Media[Jellyfin]
+        end
+    end
+
+    Cloud[Google Cloud Storage] -.->|Encrypted Backups| Host
+    CF[Cloudflare] -->|DNS & DDoS| NPM
+```
