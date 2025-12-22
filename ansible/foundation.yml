@@ -1,0 +1,93 @@
+- name: Layer 1 - Foundation (System, Docker Config & Dependencies)
+  hosts: all
+  become: yes
+
+  vars:
+    system_user: "dietpi"
+    
+    # System Packages
+    required_packages:
+      - git
+      - curl
+      - wget
+      - htop
+      - make
+      - unzip
+      - dnsutils
+      - gpg
+      - software-properties-common
+      # Python Libraries (Critical for Ansible modules)
+      - python3-docker        # For managing Docker containers
+      - python3-requests      # For GCS downloads
+      - python3-google-auth   # For GCS authentication
+
+    # Docker Networks
+    docker_networks:
+      - core
+      - database
+      - monitoring
+      - media
+      - portfolio
+      - trivia
+
+  tasks:
+    # --- PHASE 1: SYSTEM PREP ---
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install System Prerequisites
+      apt:
+        name: "{{ required_packages }}"
+        state: present
+
+    - name: Ensure Local Bin Directory exists
+      file:
+        path: "/home/{{ system_user }}/.local/bin"
+        state: directory
+        owner: "{{ system_user }}"
+        mode: '0755'
+
+    # --- PHASE 2: TERRAFORM ---
+    - name: Download HashiCorp GPG Key
+      get_url:
+        url: https://apt.releases.hashicorp.com/gpg
+        dest: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Add HashiCorp Repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+        state: present
+        filename: hashicorp
+
+    - name: Install Terraform
+      apt:
+        name: terraform
+        state: present
+
+    # --- PHASE 3: SAFE DOCKER CONFIG ---
+    - name: Add User to Docker Group
+      user:
+        name: "{{ system_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create Docker Networks
+      docker_network:
+        name: "{{ item }}"
+        driver: bridge
+      loop: "{{ docker_networks }}"
+
+    # --- PHASE 4: DIRECTORY STRUCTURE ---
+    - name: Create Homelab Directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ system_user }}"
+        group: "{{ system_user }}"
+      loop:
+        - /opt/homelab
+        - /opt/homelab/backups
+        - /opt/homelab/secrets

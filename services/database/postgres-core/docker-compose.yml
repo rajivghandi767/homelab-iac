@@ -1,0 +1,45 @@
+services:
+  postgres-core:
+    image: postgres:18-alpine
+    container_name: postgres-core
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Superuser Auth
+      - POSTGRES_USER=${POSTGRES_ROOT_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_ROOT_PASSWORD}
+      # Pass App Credentials into the init script
+      - PORTFOLIO_PROD_DB_USER=${PORTFOLIO_PROD_DB_USER}
+      - PORTFOLIO_PROD_DB_PASSWORD=${PORTFOLIO_PROD_DB_PASSWORD}
+      - PORTFOLIO_PROD_DB_NAME=${PORTFOLIO_PROD_DB_NAME}
+      - TRIVIA_PROD_DB_USER=${TRIVIA_PROD_DB_USER}
+      - TRIVIA_PROD_DB_PASSWORD=${TRIVIA_PROD_DB_PASSWORD}
+      - TRIVIA_PROD_DB_NAME=${TRIVIA_PROD_DB_NAME}
+      # Dev Database Credentials
+      - PORTFOLIO_DEV_DB_USER=${PORTFOLIO_DEV_DB_USER}
+      - PORTFOLIO_DEV_DB_PASSWORD=${PORTFOLIO_DEV_DB_PASSWORD}
+      - PORTFOLIO_DEV_DB_NAME=${PORTFOLIO_DEV_DB_NAME}
+      - TRIVIA_DEV_DB_USER=${TRIVIA_DEV_DB_USER}
+      - TRIVIA_DEV_DB_PASSWORD=${TRIVIA_DEV_DB_PASSWORD}
+      - TRIVIA_DEV_DB_NAME=${TRIVIA_DEV_DB_NAME}
+    volumes:
+      - postgres_core_data:/var/lib/postgresql/data/
+      - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - database
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ROOT_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_core_data:
+    name: postgres_core_data
+
+networks:
+  database:
+    external: true

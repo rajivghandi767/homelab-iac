@@ -1,0 +1,30 @@
+services:
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - WATCHTOWER_SCHEDULE=${WATCHTOWER_SCHEDULE}
+      - WATCHTOWER_CLEANUP=${WATCHTOWER_CLEANUP}
+      - WATCHTOWER_INCLUDE_RESTARTING=${WATCHTOWER_INCLUDE_RESTARTING}
+      - WATCHTOWER_SCOPE=${WATCHTOWER_SCOPE}
+      - TZ=${TZ}
+      - WATCHTOWER_DEBUG=${WATCHTOWER_DEBUG}
+      # Notification Settings
+      - WATCHTOWER_NOTIFICATIONS=${WATCHTOWER_NOTIFICATIONS}
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL}
+      - WATCHTOWER_NOTIFICATION_REPORT=${WATCHTOWER_NOTIFICATION_REPORT}
+      - WATCHTOWER_NOTIFICATIONS_HOSTNAME=${WATCHTOWER_NOTIFICATIONS_HOSTNAME}
+      - WATCHTOWER_NOTIFICATION_TEMPLATE=${WATCHTOWER_NOTIFICATION_TEMPLATE}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - core
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+
+networks:
+  core:
+    external: true

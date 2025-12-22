@@ -1,0 +1,39 @@
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+    command: server
+    volumes:
+      - ./config:/vault/config:ro
+      - vault_data:/vault/data
+      - vault_logs:/vault/logs
+    networks:
+      - core
+      - monitoring
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  vault_data:
+    external: true
+    name: vault_data
+  vault_logs:
+    external: true
+    name: vault_logs
+
+networks:
+  core:
+    external: true
+  monitoring:
+    external: true

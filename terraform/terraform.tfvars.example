@@ -1,0 +1,3 @@
+gcp_project_id       = "gcp_project_id"
+backup_bucket_name   = "backup_bucket_name"
+gcp_credentials_file = "../secrets/path_to_json"

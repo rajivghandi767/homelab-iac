@@ -1,0 +1,70 @@
+services:
+  unifi-db:
+    image: mongo:4.4.18
+    container_name: unifi-db
+    networks:
+      - core
+    volumes:
+      - unifi_db_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    restart: unless-stopped
+
+  unifi-controller:
+    image: lscr.io/linuxserver/unifi-network-application:latest
+    container_name: unifi-controller
+    networks:
+      - core
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - MEM_LIMIT=${MEM_LIMIT}
+      - MEM_STARTUP=${MEM_STARTUP}
+      - MONGO_USER=${MONGO_USER}
+      - MONGO_PASS=${MONGO_PASS}
+      - MONGO_HOST=${MONGO_HOST}
+      - MONGO_PORT=${MONGO_PORT}
+      - MONGO_DBNAME=${MONGO_DBNAME}
+    volumes:
+      - ./config:/config
+    ports:
+      - 8080:8080 # Device Inform
+      - 3478:3478/udp # STUN
+      - 10001:10001/udp # Discovery
+    labels:
+      - "com.centurylinklabs.watchtower.scope=unifi-monitor"
+    depends_on:
+      - unifi-db
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower-unifi
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=${TZ}
+      - WATCHTOWER_SCOPE=unifi-monitor
+      - WATCHTOWER_MONITOR_ONLY=${WATCHTOWER_MONITOR_ONLY}
+      - WATCHTOWER_SCHEDULE=${WATCHTOWER_SCHEDULE}
+      - WATCHTOWER_NOTIFICATIONS=${WATCHTOWER_NOTIFICATIONS}
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFICATION_URL}
+      - WATCHTOWER_NOTIFICATION_REPORT=${WATCHTOWER_NOTIFICATION_REPORT}
+      - WATCHTOWER_NOTIFICATION_TEMPLATE=${WATCHTOWER_NOTIFICATION_TEMPLATE}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - core
+    labels:
+      - "com.centurylinklabs.watchtower.scope=unifi-monitor"
+
+volumes:
+  unifi_db_data:
+    external: true
+    name: unifi_db_data
+
+networks:
+  core:
+    external: true

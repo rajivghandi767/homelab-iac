@@ -1,0 +1,62 @@
+- name: Layer 2 - Restore Data Strategies
+  hosts: all
+  become: yes
+  vars_files:
+    - group_vars/all/secrets.yml
+
+  vars:
+    backup_dir: "/opt/homelab/backups/downloads"
+    # Define map of Backup File -> Docker Volume Name
+    # This ensures data goes exactly where the new containers expect it
+    restore_map:
+      - { file: "jenkins", volume: "jenkins_data" }
+      - { file: "vault_data", volume: "vault_data" }
+      - { file: "npm_data", volume: "npm_data" }
+      - { file: "npm_letsencrypt", volume: "npm_letsencrypt" }
+
+  tasks:
+    # 1. SETUP
+    - name: Create Download Directory
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+
+    # 2. DOWNLOAD (Using GCP Module)
+    - name: Download Encrypted Backups
+      google.cloud.gcp_storage_object:
+        action: download
+        bucket: "{{ gcs_bucket_name }}"
+        src: "latest/{{ item.file }}.tar.gz.gpg"
+        dest: "{{ backup_dir }}/{{ item.file }}.tar.gz.gpg"
+        project: "{{ gcp_project_id }}"
+        auth_kind: serviceaccount
+        service_account_file: "/tmp/gcs_key.json" # handled by setup.sh prep
+      loop: "{{ restore_map }}"
+
+    # 3. DECRYPT
+    - name: Decrypt Backups
+      shell: |
+        gpg --batch --yes --passphrase "{{ backup_encryption_key }}" \
+        -o {{ backup_dir }}/{{ item.file }}.tar.gz \
+        -d {{ backup_dir }}/{{ item.file }}.tar.gz.gpg
+      loop: "{{ restore_map }}"
+      no_log: true # Hide password from logs
+
+    # 4. RESTORE INTO VOLUMES (The "Docker Way")
+    - name: Inject Data into Docker Volumes
+      shell: |
+        # Ensure volume exists
+        docker volume create {{ item.volume }}
+        # Run ephemeral container to untar directly into the volume
+        docker run --rm \
+          -v {{ item.volume }}:/target \
+          -v {{ backup_dir }}:/backup \
+          alpine tar -xzf /backup/{{ item.file }}.tar.gz -C /target
+      loop: "{{ restore_map }}"
+
+    - name: Cleanup Decrypted Files
+      file:
+        path: "{{ backup_dir }}/{{ item.file }}.tar.gz"
+        state: absent
+      loop: "{{ restore_map }}"

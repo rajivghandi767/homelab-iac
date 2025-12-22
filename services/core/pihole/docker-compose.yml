@@ -1,0 +1,43 @@
+services:
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    restart: unless-stopped
+    hostname: rwDietPi
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    env_file: .env
+    environment:
+      TZ: ${TZ}
+      WEBPASSWORD: ${SECURE_PASSWORD}
+    volumes:
+      - pihole_config:/etc/pihole/
+      - pihole_dnsmasq:/etc/dnsmasq.d/
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - core
+    healthcheck:
+      test:
+        ["CMD", "dig", "+short", "+tries=1", "+time=1", "@127.0.0.1", "pi.hole"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pihole_config:
+    external: true
+    name: pihole_config
+  pihole_dnsmasq:
+    external: true
+    name: pihole_dnsmasq
+
+networks:
+  core:
+    external: true

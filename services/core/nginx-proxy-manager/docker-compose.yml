@@ -1,0 +1,34 @@
+services:
+  nginx:
+    container_name: nginx-proxy-manager
+    image: "jc21/nginx-proxy-manager:latest"
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+    ports:
+      - "80:80" 
+      - "443:443"
+      - "81:81"
+    volumes:
+      - npm_data:/data                 
+      - npm_letsencrypt:/etc/letsencrypt
+    networks:
+      - core
+    healthcheck:
+      test: ["CMD", "/usr/bin/check-health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  npm_data:
+    external: true
+    name: npm_data
+  npm_letsencrypt:
+    external: true
+    name: npm_letsencrypt
+
+networks:
+  core:
+    external: true

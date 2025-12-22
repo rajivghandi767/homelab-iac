@@ -1,0 +1,21 @@
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+    volumes:
+      - portainer_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - core
+
+volumes:
+  portainer_data:
+    external: true
+    name: portainer_data
+
+networks:
+  core:
+    external: true
