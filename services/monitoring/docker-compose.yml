@@ -158,6 +158,7 @@ services:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     volumes:
       - ./alertmanager/config:/etc/alertmanager/config:ro
+      - alertmanager_data:/alertmanager
     networks:
       - core
       - monitoring
@@ -182,6 +183,9 @@ volumes:
   prometheus_data:
     external: true
     name: prometheus_data
+  alertmanager_data:
+    external: true
+    name: alertmanager_data
 
 networks:
   core:

@@ -14,6 +14,7 @@ services:
       - ./config:/vault/config:ro
       - vault_data:/vault/data
       - vault_logs:/vault/logs
+      - vault_file:/vault/file
     networks:
       - core
       - monitoring
@@ -31,6 +32,9 @@ volumes:
   vault_logs:
     external: true
     name: vault_logs
+  vault_file:
+    external: true
+    name: vault_file
 
 networks:
   core:

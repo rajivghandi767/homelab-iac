@@ -6,6 +6,7 @@ services:
       - core
     volumes:
       - unifi_db_data:/data/db
+      - unifi_config:/data/configdb
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     restart: unless-stopped
 
@@ -64,6 +65,9 @@ volumes:
   unifi_db_data:
     external: true
     name: unifi_db_data
+  unifi_config:
+    external: true
+    name: unifi_config
 
 networks:
   core:
