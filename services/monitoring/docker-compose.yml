@@ -15,6 +15,7 @@ services:
     volumes:
       - ./prometheus/config:/etc/prometheus/config:ro
       - ./prometheus/alerts:/etc/prometheus/alerts:ro
+      - ./prometheus/vault_token:/etc/prometheus/vault_token:ro
       - prometheus_data:/prometheus
     networks:
       - core

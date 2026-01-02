@@ -31,8 +31,10 @@ services:
       - ./config:/config
     ports:
       - 8080:8080 # Device Inform
+      - 8443:8443 # Web UI
       - 3478:3478/udp # STUN
       - 10001:10001/udp # Discovery
+      - 6789:6789/tcp # WiFi Man
     labels:
       - "com.centurylinklabs.watchtower.scope=unifi-monitor"
     depends_on:
