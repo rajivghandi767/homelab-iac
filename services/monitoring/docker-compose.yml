@@ -155,8 +155,6 @@ services:
     restart: unless-stopped
     labels:
       - "com.centurylinklabs.watchtower.scope=global"
-    environment:
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     volumes:
       - ./alertmanager/config:/etc/alertmanager/config:ro
       - alertmanager_data:/alertmanager
