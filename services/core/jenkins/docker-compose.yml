@@ -5,7 +5,8 @@ services:
     restart: unless-stopped
     user: jenkins
     environment:
-      - TZ="America/New_York"
+      - JAVA_OPTS=-Duser.timezone=America/New_York
+      - TZ=America/New_York
     labels:
       - "com.centurylinklabs.watchtower.scope=global"
     group_add:
