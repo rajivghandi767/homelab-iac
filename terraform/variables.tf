@@ -34,5 +34,5 @@ variable "homelab_public_ip" {
 variable "local_network_ip" {
   description = "The internal IP of your Pi"
   type        = string
-  default     = "192.168.1.100" # Replace with your Pi's actual LAN IP
+  default     = "10.100.10.5" # Replace with your Pi's actual LAN IP
 }

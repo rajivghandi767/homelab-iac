@@ -79,6 +79,28 @@
         driver: bridge
       loop: "{{ docker_networks }}"
 
+    # --- PHASE 3.5: CONFIGURATION & SECRETS ---
+    # This ensures variables are loaded from your new config files
+    - name: Load Global Config and Secrets
+      include_vars:
+        dir: group_vars/all
+        extensions:
+          - yml
+
+    - name: Generate Environment Files from Templates
+      template:
+        src: "../services/{{ item.path }}/.env.j2"
+        dest: "/opt/homelab/services/{{ item.path }}/.env"
+        mode: '0600' # Secure: Only owner can read
+      loop:
+        - { path: 'core/unifi-controller' }
+        - { path: 'core/pihole' }
+        - { path: 'core/watchtower' }
+        - { path: 'database/postgres-core' }
+        - { path: 'database/pgadmin' }
+        - { path: 'monitoring' }
+      tags: ['env_files']
+
     # --- PHASE 4: DIRECTORY STRUCTURE ---
     - name: Create Homelab Directories
       file:
@@ -88,6 +110,6 @@
         owner: "{{ system_user }}"
         group: "{{ system_user }}"
       loop:
-        - /opt/homelab
-        - /opt/homelab/backups
-        - /opt/homelab/secrets
+        - /opt/homelab-iac
+        - /opt/homelab-iac/backups
+        - /opt/homelab-iac/secrets

@@ -5,6 +5,7 @@ secrets/
 *.pem
 .env
 .env.*
+! .env.j2
 ! .env.example
 
 # --- Backups ---

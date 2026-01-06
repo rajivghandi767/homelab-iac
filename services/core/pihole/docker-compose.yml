@@ -17,8 +17,8 @@ services:
       - pihole_config:/etc/pihole/
       - pihole_dnsmasq:/etc/dnsmasq.d/
     dns:
-      - 127.0.0.1
-      - 1.1.1.1
+      - ${PIHOLE_DNS_1}
+      - ${PIHOLE_DNS_2}
     cap_add:
       - NET_ADMIN
     networks:

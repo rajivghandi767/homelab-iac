@@ -2,7 +2,7 @@
 set -e
 
 # --- Configuration ---
-BACKUP_ROOT="/opt/homelab/backups/staging"
+BACKUP_ROOT="/opt/homelab-iac/backups/staging"
 DATE=$(date +%Y-%m-%d)
 GCS_BUCKET="gs://homelab-backups-rajiv" # Matches your Terraform output
 SECRETS_FILE="../secrets/.env"

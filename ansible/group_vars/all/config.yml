@@ -1,0 +1,52 @@
+# --- Global System Settings ---
+timezone: "America/New_York"
+domain_root: "rajivwallace.com"
+
+# Standard User/Group IDs for DietPi (and Pihole/Unifi PUID/PGID)
+puid: "1000"
+pgid: "1000"
+system_user: "dietpi"
+
+# --- Service: Unifi Controller ---
+# Resource limits & Mongo config
+unifi_mem_limit: "2048"
+unifi_mem_startup: "2048"
+unifi_mongo_port: "27017"
+unifi_mongo_dbname: "unifi"
+unifi_mongo_host: "unifi-db"
+
+unifi_watchtower_scope: "unifi-monitor"
+unifi_watchtower_monitor_only: "true"
+unifi_watchtower_schedule: "0 0 3 * * *"
+unifi_watchtower_notification_report: "true"
+unifi_watchtower_notifications_hostname: "Unifi-Monitor"
+unifi_watchtower_template: "{{if .Report}}{{if .Report.Stale}}🦄 **UniFi Update Available**{{println}}**🆕 New Version Found:**{{range .Report.Stale}}{{println}}• {{.Name}} ({{.ImageName}}){{end}}{{else}}✅ **UniFi Up-to-Date**{{println}}{{end}}{{if .Report.Failed}}{{println}}**❌ Check Failed:**{{range .Report.Failed}}{{println}}• {{.Name}}{{end}}{{println}}{{end}}{{println}}📊 {{len .Report.Scanned}} containers checked{{else}}🤖 **UniFi Monitor Ready** - Next check: 0300{{end}}"
+
+# --- Service: Watchtower (Global) ---
+
+watchtower_notifications: "shoutrrr"
+global_watchtower_schedule: "0 30 3 * * *"
+global_watchtower_cleanup: "true"
+global_watchtower_include_restarting: "true"
+global_watchtower_debug: "false"
+global_watchtower_scope: "global"
+global_watchtower_notification_report: "true"
+global_watchtower_notifications_hostname: "rwDietPi"
+global_watchtower_notification_template: "{{- if .Report -}}🐳 **Container Updates Complete**{{println}}{{- if .Report.Updated }}{{println}}**✅ Updated:**{{- range .Report.Updated}}{{println}}• {{.Name}}{{- end}}{{println}}{{- end}}{{- if .Report.Failed }}{{println}}**❌ Failed:**{{- range .Report.Failed}}{{println}}• {{.Name}}{{- end}}{{println}}{{- end}}{{println}}📊 {{len .Report.Scanned}} containers checked{{- else -}}🤖 **Watchtower Ready** - Next check: 0330{{- end -}}"
+
+# --- Service: Postgres (Database Names) ---
+
+postgres_host: "postgres-core"
+postgres_port: "5432"
+postgres_root_db_name: "admin_sys"
+
+portfolio_prod_db_name: "portfolio-prod"
+portfolio_dev_db_name: "portfolio-dev"
+
+trivia_prod_db_name: "trivia-prod"
+trivia_dev_db_name: "trivia-dev"
+
+# --- Service: Pihole ---
+# DNS Upstreams (Quad 9 & Local)
+pihole_dns_1: "127.0.0.1"
+pihole_dns_2: "9.9.9.9"
