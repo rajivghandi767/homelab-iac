@@ -121,7 +121,7 @@ chmod +x setup.sh
 **What happens next?**
 
 1.  **Dependencies**: Installs Docker, Python, Ansible, and GCP libraries.
-2.  **Config Generation**: Decrypts `secrets.yml` and compiles all `.env.j2` templates into actual `.env` files in `/opt/homelab/services`.
+2.  **Config Generation**: Decrypts `secrets.yml` and compiles all `.env.j2` templates into actual `.env` files in `/opt/homelab-iac/services`.
 3.  **Restoration (Optional)**: Prompts you to restore data from GCS. If `y`, it downloads, decrypts, and injects data into Docker volumes.
 4.  **Launch**: Brings up all Docker Compose stacks in the correct order.
 
@@ -177,7 +177,8 @@ When running `./setup.sh`, select **"Yes"** at the Restore prompt. Ansible will:
 | `core`       | Core infrastructure   | Jenkins, NPM, Vault, Pihole, Portainer |
 | `database`   | Database services     | PostgreSQL, pgAdmin                    |
 | `monitoring` | Monitoring & alerting | Prometheus, Grafana, Alertmanager      |
-| `media`      | Media & Apps          | Jellyfin, Portfolio, Trivia            |
+| `media`      | Media                 | Jellyfin                               |
+| `app-name`   | Web Apps              | Portfolio, Trivia                      |
 
 ## 📊 Monitoring
 
