@@ -14,32 +14,37 @@ The system uses a **Centralized Service Architecture**. Unlike typical Docker se
 - **Ansible**: Manages configuration management, secrets injection, and service bootstrapping.
 - **Docker Compose**: Defines container services and networks.
 
-```mermaid
-graph TD
-    subgraph Host [Raspberry Pi 4B / DietPi]
-        Ansible[Ansible Playbooks] -->|Generates| Env[.env Configs]
-        Ansible -->|Decrypts| Secrets[Secrets.yml]
-        Secrets -->|Injects into| Env
-
-        NPM[Nginx Proxy Manager] -->|Routing| V[Vault]
-        NPM -->|Routing| J[Jenkins]
-        NPM -->|Routing| P[Portainer]
-        NPM -->|Routing| G[Grafana]
-
-        subgraph "Core Services"
-            V[HashiCorp Vault] ---|Secrets| Apps
-            DB[(Postgres Core)] ---|Central DB| Apps
-            Prom[Prometheus] ---|Metrics| Apps
-        end
-
-        subgraph "Applications"
-            Apps[Portfolio & Trivia]
-            Media[Jellyfin]
-        end
-    end
-
-    Cloud[Google Cloud Storage] -.->|Encrypted Backups| Host
-    CF[Cloudflare] -->|DNS & DDoS| NPM
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       Raspberry Pi 4B (Host: DietPi)                    │
+│                                                                         │
+│  ┌──────────────────────┐             ┌──────────────────────────────┐  │
+│  │   Ingress & Network  │──(Traffic)─▶│             Core             │  │
+│  │                      │             │                              │  │
+│  │  • Nginx Proxy Mgr   │             │  • Jenkins (CI/CD)           │  │
+│  │  • Pi-hole (DNS)     │             │  • Vault (Secrets)           │  │
+│  │  • Unifi Controller  │             │  • Portainer                 │  │
+│  └──────────┬───────────┘             └──────┬───────────────────────┘  │
+│             │                                │                          │
+│             │ (Traffic)                      │ (Deploys)                │
+│             ▼                                ▼                          │
+│  ┌──────────────────────┐             ┌──────────────────────────────┐  │
+│  │        Media         │             │         Applications         │  │
+│  │                      │             │                              │  │
+│  │  • Jellyfin          │             │  • Portfolio Website         │  │
+│  └──────────┬───────────┘             │  • Country Trivia App        │  │
+│             │                         └──────────────┬───────────────┘  │
+│             │ (Metrics)                              │ (SQL)            │
+│             ▼                                        ▼                  │
+│  ┌──────────────────────┐             ┌──────────────────────────────┐  │
+│  │      Monitoring      │◀──(Metrics)─│           Database           │  │
+│  │                      │             │                              │  │
+│  │  • Prometheus        │             │  • PostgreSQL (Central DB)   │  │
+│  │  • Grafana           │             │  • pgAdmin                   │  │
+│  └──────────────────────┘             └──────────────────────────────┘  │
+│                                                                         │
+│   Backups: Automated daily encrypted upload to Google Cloud Storage     │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 Features
@@ -69,7 +74,7 @@ homelab-iac/
 │   ├── database/                     # PostgreSQL, pgAdmin
 │   ├── monitoring/                   # Prometheus, Grafana
 │   ├── media/                        # Jellyfin
-│   └── ...                           # Each service has docker-compose.yml & .env.j2
+│   └── apps/                         # Hosted Apps (Portfolio Website, Country Trivia)
 └── scripts/                          # Backup scripts
 ```
 
