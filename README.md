@@ -182,7 +182,7 @@ When running `./setup.sh`, select **"Yes"** at the Restore prompt. Ansible will:
 
 ## 📊 Monitoring
 
-### Access Dashboards
+### Access Dashboards ( Not Publicly Accessible )
 
 - **Grafana**: https://grafana.rajivwallace.com
 - **Prometheus**: https://prometheus.rajivwallace.com
