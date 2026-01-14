@@ -172,13 +172,13 @@ When running `./setup.sh`, select **"Yes"** at the Restore prompt. Ansible will:
 
 ## 🌐 Network Architecture
 
-| Network      | Purpose               | Services                                                  |
-| ------------ | --------------------- | --------------------------------------------------------- |
-| `core`       | Core infrastructure   | Jenkins, NPM, Vault, Pihole, Portainer                    |
-| `database`   | Database services     | PostgreSQL, pgAdmin                                       |
-| `monitoring` | Monitoring & alerting | Prometheus, Grafana, Alertmanager                         |
-| `media`      | Media                 | Jellyfin                                                  |
-| `app-name`   | Web Apps              | Portfolio, Trivia (Hosted apps run in their own networks) |
+| Network      | Purpose               | Services                                                       |
+| ------------ | --------------------- | -------------------------------------------------------------- |
+| `core`       | Core infrastructure   | Jenkins, NPM, Vault, Pihole, Portainer                         |
+| `database`   | Database services     | PostgreSQL, pgAdmin                                            |
+| `monitoring` | Monitoring & alerting | Prometheus, Grafana, Alertmanager                              |
+| `media`      | Media                 | Jellyfin                                                       |
+| `app-name`   | Web Apps              | Hosted apps run in their own networks (portfolio, trivia etc.) |
 
 ## 📊 Monitoring
 
