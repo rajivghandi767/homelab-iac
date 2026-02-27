@@ -13,7 +13,7 @@ resource "cloudflare_record" "root" {
 }
 
 resource "cloudflare_record" "public_cnames" {
-  for_each = toset(["www", "trivia-api", "trivia", "portfolio-api", "portfolio", "jenkins", "unifi", "jellyfin"])
+  for_each = toset(["www", "trivia-api", "trivia", "portfolio-api", "portfolio", "jenkins", "jellyfin", "vpn"])
   
   zone_id = data.cloudflare_zone.main.id
   name    = each.key
@@ -26,7 +26,7 @@ resource "cloudflare_record" "public_cnames" {
 # These bypass Cloudflare Proxy. Useful for admin panels you don't want exposed 
 # to the public internet, or for split-horizon DNS inside your home.
 resource "cloudflare_record" "local_services" {
-  for_each = toset(["jenkins", "vault", "portainer", "nginx", "pgadmin"])
+  for_each = toset(["jenkins", "vault", "portainer", "nginx", "pgadmin", "unifi"])
 
   zone_id = data.cloudflare_zone.main.id
   name    = each.key

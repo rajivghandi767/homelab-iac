@@ -5,7 +5,7 @@
     - group_vars/all/secrets.yml
 
   vars:
-    backup_dir: "/opt/homelab/backups/downloads"
+    backup_dir: "/opt/homelab-iac/backups/downloads"
     # Define map of Backup File -> Docker Volume Name
     # This ensures data goes exactly where the new containers expect it
     restore_map:
@@ -13,6 +13,13 @@
       - { file: "vault_data", volume: "vault_data" }
       - { file: "npm_data", volume: "npm_data" }
       - { file: "npm_letsencrypt", volume: "npm_letsencrypt" }
+
+  pre_tasks:
+    - name: Create temporary GCP Service Account Key for Restore
+      copy:
+        content: "{{ gcs_sa_key_json }}"
+        dest: "/tmp/gcs_key.json"
+        mode: '0600'
 
   tasks:
     # 1. SETUP
@@ -31,13 +38,13 @@
         dest: "{{ backup_dir }}/{{ item.file }}.tar.gz.gpg"
         project: "{{ gcp_project_id }}"
         auth_kind: serviceaccount
-        service_account_file: "/tmp/gcs_key.json" # handled by setup.sh prep
+        service_account_file: "/tmp/gcs_key.json" # Now this file actually exists!
       loop: "{{ restore_map }}"
 
     # 3. DECRYPT
     - name: Decrypt Backups
       shell: |
-        gpg --batch --yes --passphrase "{{ backup_encryption_key }}" \
+        gpg --batch --yes --passphrase "{{ backup_encryption_passphrase }}" \
         -o {{ backup_dir }}/{{ item.file }}.tar.gz \
         -d {{ backup_dir }}/{{ item.file }}.tar.gz.gpg
       loop: "{{ restore_map }}"
@@ -60,3 +67,8 @@
         path: "{{ backup_dir }}/{{ item.file }}.tar.gz"
         state: absent
       loop: "{{ restore_map }}"
+      
+    - name: Cleanup Temporary Key
+      file:
+        path: "/tmp/gcs_key.json"
+        state: absent

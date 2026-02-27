@@ -1,0 +1,24 @@
+---
+- name: Extract GCP Key for Terraform
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/all/secrets.yml
+
+  tasks:
+    - name: Ensure secrets directory exists
+      file:
+        path: "../secrets"
+        state: directory
+        mode: '0755'
+
+    - name: Write GCP Credentials JSON
+      copy:
+        content: "{{ gcs_sa_key_json }}"
+        dest: "../secrets/gcp-credentials.json"
+        mode: '0600'
+      
+    - name: Success Message
+      debug:
+        msg: "✅ Key extracted to secrets/gcp-credentials.json. You can now run Terraform."

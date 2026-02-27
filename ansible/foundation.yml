@@ -3,7 +3,7 @@
   become: yes
 
   vars:
-    system_user: "dietpi"
+    system_user: "dietpi" #change if OS changes
     
     # System Packages
     required_packages:
@@ -16,7 +16,6 @@
       - dnsutils
       - gpg
       - software-properties-common
-      # Python Libraries (Critical for Ansible modules)
       - python3-docker        # For managing Docker containers
       - python3-requests      # For GCS downloads
       - python3-google-auth   # For GCS authentication
@@ -80,7 +79,6 @@
       loop: "{{ docker_networks }}"
 
     # --- PHASE 3.5: CONFIGURATION & SECRETS ---
-    # This ensures variables are loaded from your new config files
     - name: Load Global Config and Secrets
       include_vars:
         dir: group_vars/all
@@ -91,7 +89,7 @@
       template:
         src: "../services/{{ item.path }}/.env.j2"
         dest: "/opt/homelab/services/{{ item.path }}/.env"
-        mode: '0600' # Secure: Only owner can read
+        mode: '0600'
       loop:
         - { path: 'core/unifi-controller' }
         - { path: 'core/pihole' }
@@ -113,3 +111,37 @@
         - /opt/homelab-iac
         - /opt/homelab-iac/backups
         - /opt/homelab-iac/secrets
+
+    # --- PHASE 5: BACKUP AUTOMATION ---
+    - name: Ensure Scripts Directory exists
+      file:
+        path: "/opt/homelab-iac/scripts"
+        state: directory
+        mode: '0755'
+        owner: "{{ system_user }}"
+        group: "{{ system_user }}"
+
+    - name: Install Backup Script
+      copy:
+        src: "../scripts/backup_volumes.sh"
+        dest: "/opt/homelab-iac/scripts/backup_volumes.sh"
+        mode: '0755'
+        owner: "{{ system_user }}"
+        group: "{{ system_user }}"
+
+    - name: Create Secrets .env for Backup Script
+      copy:
+        dest: "/opt/homelab-iac/secrets/.env"
+        mode: '0600'
+        owner: "{{ system_user }}" 
+        content: |
+          BACKUP_ENCRYPTION_KEY="{{ backup_encryption_passphrase }}"
+
+    - name: Schedule Daily Backup (Cron)
+      cron:
+        name: "Run Daily Backup"
+        minute: "0"
+        hour: "4" # Runs at 4:00 AM
+        user: "root" # Run as root to allow stopping/starting docker containers
+        # CRITICAL: We cd into the dir first so the relative paths (../secrets) in script work
+        job: "cd /opt/homelab-iac/scripts && ./backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
