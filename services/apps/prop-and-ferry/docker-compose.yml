@@ -1,0 +1,101 @@
+services:
+  # DB Migration & Static Files Collection
+  prop-ferry-backend-init:
+    image: ghcr.io/rajivghandi767/prop-ferry-backend:${IMAGE_TAG:-latest}
+    container_name: prop-ferry-backend-init
+    user: root
+    networks:
+      - prop-ferry
+      - database
+    env_file: .env
+    volumes:
+      - prop-ferry_static:/home/backend/django/staticfiles
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        until python -c 'import socket,os; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); s.settimeout(2); s.connect((os.environ[\"POSTGRES_HOST\"], 5432)); s.close()'; do
+          echo 'Database not ready... waiting 2s';
+          sleep 2;
+        done &&
+        echo 'Database is ready!' &&
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput"
+
+  # Portfolio Backend - Django
+  prop-ferry-backend:
+    image: ghcr.io/rajivghandi767/prop-ferry-backend:${IMAGE_TAG:-latest}
+    container_name: prop-ferry-backend
+    restart: unless-stopped
+    networks:
+      - prop-ferry
+      - database
+    depends_on:
+      prop-ferry-backend-init:
+        condition: service_completed_successfully
+    env_file: .env
+    volumes:
+      - prop-ferry_static:/home/backend/django/staticfiles
+      - prop-ferry_media:/home/backend/django/mediafiles
+      - prop-ferry_logs:/home/backend/django/logs
+    user: "backend:backend_group"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  prop-ferry-frontend:
+    image: ghcr.io/rajivghandi767/prop-ferry-frontend:${IMAGE_TAG:-latest}
+    container_name: prop-ferry-frontend
+    restart: unless-stopped
+    networks:
+      - core
+      - prop-ferry
+    depends_on:
+      prop-ferry-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Single unified nginx service
+  prop-ferry-nginx:
+    image: ghcr.io/rajivghandi767/prop-ferry-nginx:${IMAGE_TAG:-latest}
+    container_name: prop-ferry-nginx
+    restart: unless-stopped
+    networks:
+      - core
+      - prop-ferry
+    depends_on:
+      prop-ferry-backend:
+        condition: service_healthy
+      prop-ferry-frontend:
+        condition: service_healthy
+    volumes:
+      - prop-ferry_static:/usr/share/nginx/html/static:ro
+      - prop-ferry_media:/usr/share/nginx/html/media:ro
+      - prop-ferry_logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/nginx-status/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  prop-ferry_static:
+    name: prop-ferry_static
+  prop-ferry_media:
+    name: prop-ferry_media
+  prop-ferry_logs:
+    name: prop-ferry_logs
+
+networks:
+  core:
+    external: true
+  prop-ferry:
+    external: true
+  database:
+    external: true
