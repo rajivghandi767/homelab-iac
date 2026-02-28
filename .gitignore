@@ -56,6 +56,8 @@ services/apps/portfolio-website/*
 !services/apps/portfolio-website/README.md
 services/apps/country-trivia-web/*
 !services/apps/country-trivia-web/README.md
+services/apps/prop-and-ferry/*
+!services/apps/prop-and-ferry/README.md
 
 # --- Logs & Temp Files ---
 *.log
