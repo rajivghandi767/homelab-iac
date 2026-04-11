@@ -19,6 +19,8 @@ services:
         done &&
         echo 'Database is ready!' &&
         python manage.py migrate --noinput &&
+        python manage.py enrich_locations && 
+        python manage.py enrich_carriers &&
         python manage.py collectstatic --noinput"
 
   # Portfolio Backend - Django
