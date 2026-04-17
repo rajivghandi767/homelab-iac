@@ -9,6 +9,8 @@ services:
       - IPC_LOCK
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
+      - SKIP_CHOWN=true
+      - SKIP_SETCAP=true
     command: server
     volumes:
       - ./config:/vault/config:ro
@@ -19,7 +21,7 @@ services:
       - core
       - monitoring
     healthcheck:
-      test: ["CMD", "vault", "status"]
+      test: [ "CMD", "vault", "status" ]
       interval: 30s
       timeout: 10s
       retries: 3

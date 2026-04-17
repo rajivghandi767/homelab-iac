@@ -52,6 +52,8 @@ services/monitoring/prometheus_data/
 
 # --- Application Repositories (The "Vendor" Pattern) ---
 # Keeps the folder structure but ignores the code (since they are separate repos)
+services/apps/silicon-valley-trail/*
+!services/apps/silicon-valley-trail/README.md
 services/apps/portfolio-website/*
 !services/apps/portfolio-website/README.md
 services/apps/country-trivia-web/*
