@@ -18,10 +18,11 @@ def call(String vaultAddr = 'http://vault:8200') {
         for (int i = 1; i <= 5; i++) {
             echo "🚀 Injecting Key #${i}..."
             
-            def actualSecretValue = env."KEY${i}"
+            def currentKeyVar = "KEY${i}"
             
-            writeFile file: 'vault_payload.json', text: """{"key": "${actualSecretValue}"}"""
+            sh "echo '{\"key\": \"'\$${currentKeyVar}'\"}' > vault_payload.json"
             
+            // Send the payload via curl
             def output = sh(script: "curl -s -X POST -H 'Content-Type: application/json' -d @vault_payload.json ${vaultAddr}/v1/sys/unseal", returnStdout: true).trim()
             
             sh "rm vault_payload.json"
