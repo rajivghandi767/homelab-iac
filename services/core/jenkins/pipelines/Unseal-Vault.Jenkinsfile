@@ -25,7 +25,7 @@ pipeline {
         success {
             script {
                 def timestamp = sh(returnStdout: true, script: "TZ='America/New_York' date +'%a, %d %b %Y at %H:%M %Z'").trim()
-                def msg = ":unlock: **${env.APP_NAME} Unsealed**\nThe unseal job completed successfully.\n\n:clock4: **Time:** ${timestamp}"
+                def msg = ":unlock: **${env.APP_NAME} Unsealed**\nThe vault was successfully unsealed.\n\n:clock4: **Time:** ${timestamp}"
                 
                 notifyDiscord("✅ Vault Status: UNSEALED", msg, 3066993)
             }
