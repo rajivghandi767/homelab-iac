@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+    networks:
+      - database
+    command: redis-server --save "" --appendonly no
+
+  redis_commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    container_name: redis-commander
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOSTS=${REDIS_HOSTS}
+      - HTTP_USER=${REDIS_COMMANDER_USER}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD}
+    networks:
+      - core
+      - database
+
+networks:
+  core:
+    external: true
+  database:
+    external: true
