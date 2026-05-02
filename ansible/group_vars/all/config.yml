@@ -46,6 +46,12 @@ portfolio_dev_db_name: "portfolio-dev"
 trivia_prod_db_name: "trivia-prod"
 trivia_dev_db_name: "trivia-dev"
 
+prop_feed_prod_db_name: "prop-feed-prod"
+prop_feed_dev_db_name: "prop-feed-dev"
+
+svt_prod_db_name: "svt-prod"
+svt_dev_db_name: "svt-dev"
+
 # --- Service: Pihole ---
 # DNS Upstreams (Quad 9 & Local)
 pihole_dns_1: "127.0.0.1"
