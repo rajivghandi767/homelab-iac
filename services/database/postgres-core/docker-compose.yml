@@ -3,13 +3,15 @@ services:
     image: postgres:18-alpine
     container_name: postgres-core
     restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.scope=global"
     env_file:
       - .env
     environment:
       # Superuser Auth
       - POSTGRES_USER=${POSTGRES_ROOT_USER}
       - POSTGRES_PASSWORD=${POSTGRES_ROOT_PASSWORD}
-      
+
       # Pass App Credentials into the init script
       - PORTFOLIO_PROD_DB_USER=${PORTFOLIO_PROD_DB_USER}
       - PORTFOLIO_PROD_DB_PASSWORD=${PORTFOLIO_PROD_DB_PASSWORD}

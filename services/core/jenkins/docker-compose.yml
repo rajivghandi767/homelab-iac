@@ -15,10 +15,11 @@ services:
       - jenkins_data:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker
+      - /usr/libexec/docker/cli-plugins/docker-buildx:/usr/libexec/docker/cli-plugins/docker-buildx
     networks:
       - core
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080/login || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 5
