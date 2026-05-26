@@ -72,6 +72,26 @@
         groups: docker
         append: yes
 
+    - name: Ensure /etc/docker directory exists
+      file:
+        path: /etc/docker
+        state: directory
+        mode: '0755'
+
+    - name: Configure Global Docker Log Rotation (10MB Limit)
+      copy:
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            }
+          }
+      notify: Restart Docker
+
     - name: Create Docker Networks
       docker_network:
         name: "{{ item }}"
@@ -96,6 +116,7 @@
         - { path: 'core/watchtower' }
         - { path: 'database/postgres-core' }
         - { path: 'database/pgadmin' }
+        - { path: 'cache/redis' }
         - { path: 'monitoring' }
       tags: ['env_files']
 
@@ -141,7 +162,12 @@
       cron:
         name: "Run Daily Backup"
         minute: "0"
-        hour: "4" # Runs at 4:00 AM
+        hour: "5" # Runs at 5:00 AM
         user: "root" # Run as root to allow stopping/starting docker containers
-        # CRITICAL: We cd into the dir first so the relative paths (../secrets) in script work
         job: "cd /opt/homelab-iac/scripts && ./backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
+
+  handlers:
+  - name: Restart Docker
+    service:
+      name: docker
+      state: restarted

@@ -19,7 +19,7 @@ EOSQL
 
 # --- PRODUCTION DATABASES ---
 
-# 1. Create Portfolio PROD Catalog (First, as requested)
+# 1. Create Portfolio PROD Catalog
 if [ -n "$PORTFOLIO_PROD_DB_USER" ]; then
     create_catalog "$PORTFOLIO_PROD_DB_USER" "$PORTFOLIO_PROD_DB_PASSWORD" "$PORTFOLIO_PROD_DB_NAME"
 fi
@@ -29,14 +29,12 @@ if [ -n "$TRIVIA_PROD_DB_USER" ]; then
     create_catalog "$TRIVIA_PROD_DB_USER" "$TRIVIA_PROD_DB_PASSWORD" "$TRIVIA_PROD_DB_NAME"
 fi
 
-# --- DEVELOPMENT DATABASES ---
-
-# 3. Create Portfolio DEV Catalog
-if [ -n "$PORTFOLIO_DEV_DB_USER" ]; then
-    create_catalog "$PORTFOLIO_DEV_DB_USER" "$PORTFOLIO_DEV_DB_PASSWORD" "$PORTFOLIO_DEV_DB_NAME"
+# 3. Create Prop & Ferry PROD Catalog
+if [ -n "$PROP_FERRY_PROD_DB_USER" ]; then
+    create_catalog "$PROP_FERRY_PROD_DB_USER" "$PROP_FERRY_PROD_DB_PASSWORD" "$PROP_FERRY_PROD_DB_NAME"
 fi
 
-# 4. Create Trivia DEV Catalog
-if [ -n "$TRIVIA_DEV_DB_USER" ]; then
-    create_catalog "$TRIVIA_DEV_DB_USER" "$TRIVIA_DEV_DB_PASSWORD" "$TRIVIA_DEV_DB_NAME"
+# 4. Create Silicon Valley PROD Catalog
+if [ -n "$SVT_PROD_DB_USER" ]; then
+    create_catalog "$SVT_PROD_DB_USER" "$SVT_PROD_DB_PASSWORD" "$SVT_PROD_DB_NAME"
 fi

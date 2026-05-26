@@ -14,7 +14,7 @@ source $SECRETS_FILE
 
 mkdir -p $BACKUP_ROOT
 
-# 1. PHYSICAL VOLUME BACKUPS (Apps that use flat files/sqlite)
+# 1. DOCKER VOLUME BACKUPS (Apps that use flat files/sqlite)
 VOLUMES=(
     "jenkins:jenkins_data:jenkins"
     "vault:vault_data:vault_data"
