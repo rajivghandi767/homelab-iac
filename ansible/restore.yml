@@ -8,12 +8,13 @@
   vars:
     local_staging_dir: "/tmp/homelab_backups_staging"
     remote_backup_dir: "/opt/homelab-iac/backups/downloads"
-    # Define map of Backup File -> Docker Volume Name
+    # Added "type" to differentiate volumes from sql dumps
     restore_map:
-      - { file: "jenkins", volume: "jenkins_data" }
-      - { file: "vault_data", volume: "vault_data" }
-      - { file: "npm_data", volume: "npm_data" }
-      - { file: "npm_letsencrypt", volume: "npm_letsencrypt" }
+      - { file: "jenkins", volume: "jenkins_data", type: "volume" }
+      - { file: "vault_data", volume: "vault_data", type: "volume" }
+      - { file: "npm_data", volume: "npm_data", type: "volume" }
+      - { file: "npm_letsencrypt", volume: "npm_letsencrypt", type: "volume" }
+      - { file: "postgres_logical", volume: "none", type: "sql" }
 
   pre_tasks:
     - name: Ensure secure local staging directory exists on Control Node
@@ -76,6 +77,7 @@
           -v {{ remote_backup_dir }}:/backup \
           alpine tar -xzf /backup/{{ item.file }}.tar.gz -C /target
       loop: "{{ restore_map }}"
+      when: item.type == 'volume'
 
     - name: Clean up remote archives on the Pi
       file:

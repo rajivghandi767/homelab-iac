@@ -1,0 +1,81 @@
+---
+- name: Layer 3 - Core Infrastructure Orchestration (DAG)
+  hosts: metal
+  become: yes
+  vars_files:
+    - group_vars/all/config.yml
+    - group_vars/all/secrets.yml
+
+  tasks:
+    # --- TIER 1: Network & Ingress ---
+    - name: Tier 1 | Boot Core Networking (Nginx, Pihole)
+      community.docker.docker_compose_v2:
+        project_src: "/opt/homelab-iac/services/core/{{ item }}"
+        state: present
+        wait: true
+      loop:
+        - nginx-proxy-manager
+        - pihole
+
+    # --- TIER 2: State & Secrets ---
+    - name: Tier 2 | Boot HashiCorp Vault
+      community.docker.docker_compose_v2:
+        project_src: /opt/homelab-iac/services/core/vault
+        state: present
+        wait: true
+
+    # --- TIER 3: Databases & Caching ---
+    - name: Tier 3 | Boot Database Systems
+      community.docker.docker_compose_v2:
+        project_src: "/opt/homelab-iac/services/database/{{ item }}"
+        state: present
+        wait: true
+      loop:
+        - postgres-core
+        - redis
+
+    # --- TIER 3.5: Database Data Restoration ---
+    - name: Tier 3.5 | Check for pending logical database restore
+      stat:
+        path: "/opt/homelab-iac/backups/downloads/postgres_logical.tar.gz"
+      register: db_backup_archive
+
+    - name: Tier 3.5 | Execute Zero-Downtime DB Restore
+      when: db_backup_archive.stat.exists
+      block:
+        - name: Extract SQL dump
+          command: tar -xzf postgres_logical.tar.gz
+          args:
+            chdir: "/opt/homelab-iac/backups/downloads"
+
+        - name: Wait for Postgres to accept connections (Double Check)
+          command: docker exec postgres-core pg_isready -U {{ postgres_root_user }}
+          register: pg_ready
+          until: pg_ready.rc == 0
+          retries: 10
+          delay: 5
+
+        - name: Pipe SQL dump into running Postgres container
+          shell: "cat /opt/homelab-iac/backups/downloads/postgres_logical.sql | docker exec -i postgres-core psql -U {{ postgres_root_user }}"
+          
+        - name: Cleanup remote SQL files
+          file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - "/opt/homelab-iac/backups/downloads/postgres_logical.tar.gz"
+            - "/opt/homelab-iac/backups/downloads/postgres_logical.sql"
+
+    # --- TIER 4: Control Plane & Observability ---
+    # Jenkins boots last, ensuring Vault and Postgres are ready for its CI/CD pipelines
+    - name: Tier 4 | Boot Control Plane
+      community.docker.docker_compose_v2:
+        project_src: "/opt/homelab-iac/services/{{ item }}"
+        state: present
+        wait: true
+      loop:
+        - core/jenkins
+        - core/portainer
+        - monitoring
+        - core/watchtower
+        - core/unifi-controller
