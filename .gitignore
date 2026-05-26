@@ -142,3 +142,10 @@ services/core/unifi-controller/config/data/
 services/core/unifi-controller/config/logs/
 services/core/unifi-controller/config/run/
 services/monitoring/alertmanager/config/alertmanager.yml
+
+# --- Ansible Control Node Safeguards ---
+# Prevent local vault passwords or dropped credentials from being committed
+.vault_pass
+*.vault_pass
+ansible_vault_pass.txt
+tmp/

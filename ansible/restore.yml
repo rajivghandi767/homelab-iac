@@ -1,13 +1,14 @@
-- name: Layer 2 - Restore Data Strategies
-  hosts: all
+---
+- name: Layer 2 - Zero-Trust Restore Data Strategies
+  hosts: metal
   become: yes
   vars_files:
     - group_vars/all/secrets.yml
 
   vars:
-    backup_dir: "/opt/homelab-iac/backups/downloads"
+    local_staging_dir: "/tmp/homelab_backups_staging"
+    remote_backup_dir: "/opt/homelab-iac/backups/downloads"
     # Define map of Backup File -> Docker Volume Name
-    # This ensures data goes exactly where the new containers expect it
     restore_map:
       - { file: "jenkins", volume: "jenkins_data" }
       - { file: "vault_data", volume: "vault_data" }
@@ -15,60 +16,77 @@
       - { file: "npm_letsencrypt", volume: "npm_letsencrypt" }
 
   pre_tasks:
-    - name: Create temporary GCP Service Account Key for Restore
-      copy:
-        content: "{{ gcs_sa_key_json }}"
-        dest: "/tmp/gcs_key.json"
-        mode: '0600'
+    - name: Ensure secure local staging directory exists on Control Node
+      delegate_to: localhost
+      become: no
+      file:
+        path: "{{ local_staging_dir }}"
+        state: directory
+        mode: '0700' # Strict permissions on the Mac
 
   tasks:
-    # 1. SETUP
-    - name: Create Download Directory
+    # ==================================================
+    # STAGE 1: CONTROL NODE (REMOTE MACHINE) OPERATIONS
+    # ==================================================
+    - name: Secure Retrieval and Decryption (Executed on Control Node)
+      delegate_to: localhost
+      become: no
+      block:
+        - name: Download Encrypted Backups from GCS
+          google.cloud.gcp_storage_object:
+            action: download
+            bucket: "{{ gcs_bucket_name }}"
+            src: "latest/{{ item.file }}.tar.gz.gpg"
+            dest: "{{ local_staging_dir }}/{{ item.file }}.tar.gz.gpg"
+            project: "{{ gcp_project_id }}"
+            auth_kind: serviceaccount
+            # Assuming Dashlane drops the key here during your runtime prep
+            service_account_file: "../secrets/gcp-credentials.json" 
+          loop: "{{ restore_map }}"
+
+        - name: Decrypt Backups Locally
+          shell: |
+            gpg --batch --yes --passphrase "{{ backup_encryption_passphrase }}" \
+            -o {{ local_staging_dir }}/{{ item.file }}.tar.gz \
+            -d {{ local_staging_dir }}/{{ item.file }}.tar.gz.gpg
+          loop: "{{ restore_map }}"
+          no_log: true # Never log the passphrase
+
+    # ==========================================
+    # STAGE 2: TARGET NODE (SERVER) OPERATIONS
+    # ==========================================
+    - name: Ensure remote download directory exists
       file:
-        path: "{{ backup_dir }}"
+        path: "{{ remote_backup_dir }}"
         state: directory
         mode: '0755'
 
-    # 2. DOWNLOAD (Using GCP Module)
-    - name: Download Encrypted Backups
-      google.cloud.gcp_storage_object:
-        action: download
-        bucket: "{{ gcs_bucket_name }}"
-        src: "latest/{{ item.file }}.tar.gz.gpg"
-        dest: "{{ backup_dir }}/{{ item.file }}.tar.gz.gpg"
-        project: "{{ gcp_project_id }}"
-        auth_kind: serviceaccount
-        service_account_file: "/tmp/gcs_key.json" # Now this file actually exists!
+    - name: Push Decrypted Archives to the Pi over SSH
+      copy:
+        src: "{{ local_staging_dir }}/{{ item.file }}.tar.gz"
+        dest: "{{ remote_backup_dir }}/{{ item.file }}.tar.gz"
+        mode: '0600'
       loop: "{{ restore_map }}"
 
-    # 3. DECRYPT
-    - name: Decrypt Backups
-      shell: |
-        gpg --batch --yes --passphrase "{{ backup_encryption_passphrase }}" \
-        -o {{ backup_dir }}/{{ item.file }}.tar.gz \
-        -d {{ backup_dir }}/{{ item.file }}.tar.gz.gpg
-      loop: "{{ restore_map }}"
-      no_log: true # Hide password from logs
-
-    # 4. RESTORE INTO VOLUMES (The "Docker Way")
     - name: Inject Data into Docker Volumes
       shell: |
-        # Ensure volume exists
         docker volume create {{ item.volume }}
-        # Run ephemeral container to untar directly into the volume
         docker run --rm \
           -v {{ item.volume }}:/target \
-          -v {{ backup_dir }}:/backup \
+          -v {{ remote_backup_dir }}:/backup \
           alpine tar -xzf /backup/{{ item.file }}.tar.gz -C /target
       loop: "{{ restore_map }}"
 
-    - name: Cleanup Decrypted Files
+    - name: Clean up remote archives on the Pi
       file:
-        path: "{{ backup_dir }}/{{ item.file }}.tar.gz"
+        path: "{{ remote_backup_dir }}/{{ item.file }}.tar.gz"
         state: absent
       loop: "{{ restore_map }}"
-      
-    - name: Cleanup Temporary Key
+
+  post_tasks:
+    - name: Secure Cleanup on Control Node (Shred data)
+      delegate_to: localhost
+      become: no
       file:
-        path: "/tmp/gcs_key.json"
+        path: "{{ local_staging_dir }}"
         state: absent
