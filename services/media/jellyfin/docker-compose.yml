@@ -28,7 +28,6 @@ volumes:
     external: true
     name: jellyfin_config
   jellyfin_cache:
-    external: true
     name: jellyfin_cache
 
 networks:

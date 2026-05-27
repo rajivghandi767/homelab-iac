@@ -180,10 +180,8 @@ volumes:
     external: true
     name: grafana_data
   prometheus_data:
-    external: true
     name: prometheus_data
   alertmanager_data:
-    external: true
     name: alertmanager_data
 
 networks:
