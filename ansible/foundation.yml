@@ -28,6 +28,8 @@
       - media
       - portfolio
       - trivia
+      - prop-ferry
+      - svt
 
   tasks:
     # --- PHASE 1: SYSTEM PREP ---
@@ -105,6 +107,15 @@
         extensions:
           - yml
 
+    - name: Push Docker Compose & Config files to the Pi
+      ansible.posix.synchronize:
+        src: "../services/"
+        dest: "/opt/homelab-iac/services/"
+        delete: yes
+        rsync_opts:
+          - "--exclude=*.env.j2" # Exclude templates, we compile these separately
+          - "--exclude=data/"    # Never overwrite persistent volume directories
+    
     - name: Generate Environment Files from Templates
       template:
         src: "../services/{{ item.path }}/.env.j2"
@@ -116,7 +127,7 @@
         - { path: 'core/watchtower' }
         - { path: 'database/postgres-core' }
         - { path: 'database/pgadmin' }
-        - { path: 'cache/redis' }
+        - { path: 'database/redis' }
         - { path: 'monitoring' }
       tags: ['env_files']
 

@@ -8,12 +8,23 @@
   vars:
     local_staging_dir: "/tmp/homelab_backups_staging"
     remote_backup_dir: "/opt/homelab-iac/backups/downloads"
-    # Added "type" to differentiate volumes from sql dumps
     restore_map:
+      # Core
       - { file: "jenkins", volume: "jenkins_data", type: "volume" }
       - { file: "vault_data", volume: "vault_data", type: "volume" }
       - { file: "npm_data", volume: "npm_data", type: "volume" }
       - { file: "npm_letsencrypt", volume: "npm_letsencrypt", type: "volume" }
+      - { file: "pihole_config", volume: "pihole_config", type: "volume" }
+      - { file: "pihole_dnsmasq", volume: "pihole_dnsmasq", type: "volume" }
+      - { file: "portainer_data", volume: "portainer_data", type: "volume" }
+      # UniFi
+      - { file: "unifi_db_data", volume: "unifi_db_data", type: "volume" }
+      - { file: "unifi_config", volume: "unifi_config", type: "volume" }
+      # Ops & Media
+      - { file: "pgadmin_data", volume: "pgadmin_data", type: "volume" }
+      - { file: "grafana_data", volume: "grafana_data", type: "volume" }
+      - { file: "jellyfin_config", volume: "jellyfin_config", type: "volume" }
+      # Logical DB
       - { file: "postgres_logical", volume: "none", type: "sql" }
 
   pre_tasks:

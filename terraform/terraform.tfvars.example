@@ -1,3 +1,6 @@
-gcp_project_id       = "gcp_project_id"
-backup_bucket_name   = "backup_bucket_name"
-gcp_credentials_file = "../secrets/path_to_json"
+gcp_project_id       = "your-gcp-project-id"
+backup_bucket_name   = "your-gcp-bucket-name"
+cloudflare_api_token = "your_long_cloudflare_api_token_here"
+homelab_public_ip    = "198.51.100.24"   # Your residential IP Address
+local_network_ip     = "10.100.10.5"     # Your Server's static IP
+gcp_credentials_file = "../secrets/gcp-credentials.json"

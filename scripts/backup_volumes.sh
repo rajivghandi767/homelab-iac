@@ -14,12 +14,27 @@ source $SECRETS_FILE
 
 mkdir -p $BACKUP_ROOT
 
-# 1. DOCKER VOLUME BACKUPS (Apps that use flat files/sqlite)
+# 1. DOCKER VOLUME BACKUPS (Apps that use flat files/sqlite/mongo)
 VOLUMES=(
+    # Core Infrastructure
     "jenkins:jenkins_data:jenkins"
     "vault:vault_data:vault_data"
     "nginx-proxy-manager:npm_data:npm_data"
     "nginx-proxy-manager:npm_letsencrypt:npm_letsencrypt"
+    "pihole:pihole_config:pihole_config"
+    "pihole:pihole_dnsmasq:pihole_dnsmasq"
+    "portainer:portainer_data:portainer_data"
+
+    # UniFi Controller (Targeting the DB for safe shutdown)
+    "unifi-db:unifi_db_data:unifi_db_data"
+    "unifi-db:unifi_config:unifi_config"
+
+    # Database Admins & Observability
+    "pgadmin:pgadmin_data:pgadmin_data"
+    "grafana:grafana_data:grafana_data"
+
+    # Media
+    "jellyfin:jellyfin_config:jellyfin_config"
 )
 
 echo "Starting Backup Job - $DATE"

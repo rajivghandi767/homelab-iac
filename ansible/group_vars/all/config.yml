@@ -44,7 +44,7 @@ portfolio_prod_db_name: "portfolio-prod"
 
 trivia_prod_db_name: "trivia-prod"
 
-prop_feed_prod_db_name: "prop-feed-prod"
+prop_ferry_prod_db_name: "prop-feed-prod"
 
 svt_prod_db_name: "svt-prod"
 

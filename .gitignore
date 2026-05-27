@@ -1,37 +1,60 @@
-# --- Secrets & Sensitive Data (Priority 1) ---
+# ==============================================================================
+# TIER 1: CRITICAL SECRETS & CREDENTIALS (NEVER COMMIT)
+# ==============================================================================
+# API Keys, JSON Service Accounts, and localized environment files
 secrets/
-*.enc
-*.key
+gcp-credentials.json
 *.pem
+*.key
+*.enc
+
+# Ephemeral UI/API files
 .env
 .env.*
 !.env.j2
 !.env.example
 
-# --- Backups ---
+# Ansible Control Node Safeguards (Mac)
+.vault_pass
+*.vault_pass
+ansible_vault_pass.txt
+tmp/
+
+# ==============================================================================
+# TIER 2: INFRASTRUCTURE AS CODE STATE (TERRAFORM & ANSIBLE)
+# ==============================================================================
+# Terraform (The heavy binaries and the plain-text state files)
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+crash.log
+
+# Ansible (Dynamic cache and retries)
+.ansible/
+*.retry
+vault_token
+
+# ==============================================================================
+# TIER 3: DISASTER RECOVERY & BACKUPS
+# ==============================================================================
+# Protects all local tarballs, GPG archives, and logical SQL dumps from Git
 backups/*
 !backups/.gitkeep
 !backups/README.md
-gcp-credentials.json
+*.sql
 
-# --- Local Development & OS ---
-docker-compose.override.yml
-*.local
-.DS_Store
-Thumbs.db
-.Spotlight-V100
-.Trashes
-
-# --- Service Data (Wildcards) ---
-# This protects ALL services from accidentally committing data
+# ==============================================================================
+# TIER 4: HOMELAB SERVICE DATA (DOCKER VOLUMES)
+# ==============================================================================
+# A strict wildcard approach to prevent any stateful container data from leaking
 services/*/data/
+services/*/db/
+services/*/logs/
 services/*/config/*.key
 services/*/letsencrypt/
-services/*/logs/
-services/*/db/
 
-# --- Specific Service Directories (Non-standard names) ---
-# These don't match the 'data' wildcard above, so we keep them explicit
+# Explicitly named volume mounts (Deviations from standard 'data/' naming)
 services/jenkins/jenkins_home/
 services/vault/vault_data/
 services/vault/vault_logs/
@@ -40,112 +63,51 @@ services/core/pihole/etc-dnsmasq.d/
 services/core/portainer_data/
 services/media/jellyfin/config/
 services/media/jellyfin/cache/
-
-# --- Database Data ---
-# Explicitly ignoring these to prevent database binary corruption in git
 services/database/postgres_dev_data/
 services/database/pgadmin_data/
-
-# --- Monitoring Data ---
 services/monitoring/grafana_data/
 services/monitoring/prometheus_data/
-
-# --- Application Repositories (The "Vendor" Pattern) ---
-# Keeps the folder structure but ignores the code (since they are separate repos)
-services/apps/silicon-valley-trail/*
-!services/apps/silicon-valley-trail/README.md
-services/apps/portfolio-website/*
-!services/apps/portfolio-website/README.md
-services/apps/country-trivia-web/*
-!services/apps/country-trivia-web/README.md
-services/apps/prop-and-ferry/*
-!services/apps/prop-and-ferry/README.md
-
-# --- Logs & Temp Files ---
-*.log
-logs/
-*.tmp
-*.swp
-*~
-.cache/
-
-# --- IDEs ---
-.vscode/
-.idea/
-*.iml
-
-# --- Python & Django ---
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.pytest_cache/
-.mypy_cache/
-coverage/
-*.sqlite3
-celerybeat-schedule
-
-# --- Node / Typescript / React ---
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-lock.yaml
-.npm/
-dist/
-build/
-*.tsbuildinfo
-
-# --- Docker ---
-.docker/
-
-# --- AI Tools ---
-.gemini
-.gemini/
-
-# --- Terraform ---
-# The heavy binaries
-.terraform/
-
-# The State (Contains PLAIN TEXT SECRETS - CRITICAL)
-*.tfstate
-*.tfstate.backup
-
-# The Variables (Contains your API keys)
-*.tfvars
-terraform.tfvars
-
-# Crash logs
-crash.log
-*.log
-
-# --- Ansible ---
-# Secrets file (Unless fully Vaulted)
-ansible/group_vars/all/secrets.yml
-
-# Retry files
-*.retry
-
-# Temporary inventory cache (if you ever use dynamic inventory)
-.ansible/
-
-*.sql
-
-vault_token
-
-# UniFi Controller
 services/core/unifi-controller/config/data/
 services/core/unifi-controller/config/logs/
 services/core/unifi-controller/config/run/
-services/monitoring/alertmanager/config/alertmanager.yml
 
-# --- Ansible Control Node Safeguards ---
-# Prevent local vault passwords or dropped credentials from being committed
-.vault_pass
-*.vault_pass
-ansible_vault_pass.txt
-tmp/
+# ==============================================================================
+# TIER 5: APPLICATION REPOSITORIES (JENKINS PROVISIONED)
+# ==============================================================================
+# Jenkins dynamically provisions project folders and deployment manifests 
+# from external application repositories. The IaC repo must ignore all of this
+# to prevent source-of-truth conflicts.
+
+services/apps/*
+!services/apps/.gitkeep
+
+# ==============================================================================
+# TIER 6: OS, IDEs & LANGUAGE COMPILERS
+# ==============================================================================
+# Operating System
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# IDEs & Editor configs
+.vscode/
+.idea/
+*.iml
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist/
+build/
