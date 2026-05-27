@@ -1,89 +1,41 @@
-- name: Layer 1 - Foundation (System, Docker Config & Dependencies)
+---
+- name: Provision Homelab Foundation
   hosts: all
   become: yes
-
   vars:
-    system_user: "dietpi" #change if OS changes
-    
-    # System Packages
-    required_packages:
-      - git
-      - curl
-      - wget
-      - htop
-      - make
-      - unzip
-      - dnsutils
-      - gpg
-      - software-properties-common
-      - python3-docker        # For managing Docker containers
-      - python3-requests      # For GCS downloads
-      - python3-google-auth   # For GCS authentication
-
-    # Docker Networks
-    docker_networks:
-      - core
-      - database
-      - monitoring
-      - media
-      - portfolio
-      - trivia
-      - prop-ferry
-      - svt
+    ansible_python_interpreter: /usr/bin/python3
 
   tasks:
-    # --- PHASE 1: SYSTEM PREP ---
     - name: Update apt cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
 
-    - name: Install System Prerequisites
+    - name: Install essential dependencies
       apt:
-        name: "{{ required_packages }}"
+        pkg:
+          - curl
+          - rsync           # Required for Ansible synchronize module
+          - python3-docker  # Required for Ansible docker_network module
         state: present
 
-    - name: Ensure Local Bin Directory exists
-      file:
-        path: "/home/{{ system_user }}/.local/bin"
-        state: directory
-        owner: "{{ system_user }}"
-        mode: '0755'
-
-    # --- PHASE 2: TERRAFORM ---
-    - name: Download HashiCorp GPG Key
-      get_url:
-        url: https://apt.releases.hashicorp.com/gpg
-        dest: /usr/share/keyrings/hashicorp-archive-keyring.gpg
-
-    - name: Add HashiCorp Repository
-      apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    - name: Ensure Docker networks exist safely
+      community.docker.docker_network:
+        name: "{{ item }}"
         state: present
-        filename: hashicorp
+      loop:
+        - core
+        - database
+        - monitoring
+        - media
+        - portfolio
+        - trivia
+        - prop-ferry
+        - svt
 
-    - name: Install Terraform
-      apt:
-        name: terraform
-        state: present
-
-    # --- PHASE 3: SAFE DOCKER CONFIG ---
-    - name: Add User to Docker Group
-      user:
-        name: "{{ system_user }}"
-        groups: docker
-        append: yes
-
-    - name: Ensure /etc/docker directory exists
-      file:
-        path: /etc/docker
-        state: directory
-        mode: '0755'
-
-    - name: Configure Global Docker Log Rotation (10MB Limit)
+    - name: Enforce Docker log rotation policy
       copy:
         dest: /etc/docker/daemon.json
-        mode: '0644'
         content: |
           {
             "log-driver": "json-file",
@@ -94,91 +46,25 @@
           }
       notify: Restart Docker
 
-    - name: Create Docker Networks
-      docker_network:
-        name: "{{ item }}"
-        driver: bridge
-      loop: "{{ docker_networks }}"
-
-    # --- PHASE 3.5: CONFIGURATION & SECRETS ---
-    - name: Load Global Config and Secrets
-      include_vars:
-        dir: group_vars/all
-        extensions:
-          - yml
-
-    - name: Push Docker Compose & Config files to the Pi
-      ansible.posix.synchronize:
-        src: "../services/"
-        dest: "/opt/homelab-iac/services/"
-        delete: yes
-        rsync_opts:
-          - "--exclude=*.env.j2" # Exclude templates, we compile these separately
-          - "--exclude=data/"    # Never overwrite persistent volume directories
-    
-    - name: Generate Environment Files from Templates
-      template:
-        src: "../services/{{ item.path }}/.env.j2"
-        dest: "/opt/homelab/services/{{ item.path }}/.env"
-        mode: '0600'
-      loop:
-        - { path: 'core/unifi-controller' }
-        - { path: 'core/pihole' }
-        - { path: 'core/watchtower' }
-        - { path: 'database/postgres-core' }
-        - { path: 'database/pgadmin' }
-        - { path: 'database/redis' }
-        - { path: 'monitoring' }
-      tags: ['env_files']
-
-    # --- PHASE 4: DIRECTORY STRUCTURE ---
-    - name: Create Homelab Directories
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-        owner: "{{ system_user }}"
-        group: "{{ system_user }}"
-      loop:
-        - /opt/homelab-iac
-        - /opt/homelab-iac/backups
-        - /opt/homelab-iac/secrets
-
-    # --- PHASE 5: BACKUP AUTOMATION ---
-    - name: Ensure Scripts Directory exists
-      file:
-        path: "/opt/homelab-iac/scripts"
-        state: directory
-        mode: '0755'
-        owner: "{{ system_user }}"
-        group: "{{ system_user }}"
-
-    - name: Install Backup Script
-      copy:
-        src: "../scripts/backup_volumes.sh"
-        dest: "/opt/homelab-iac/scripts/backup_volumes.sh"
-        mode: '0755'
-        owner: "{{ system_user }}"
-        group: "{{ system_user }}"
-
-    - name: Create Secrets .env for Backup Script
-      copy:
-        dest: "/opt/homelab-iac/secrets/.env"
-        mode: '0600'
-        owner: "{{ system_user }}" 
-        content: |
-          BACKUP_ENCRYPTION_KEY="{{ backup_encryption_passphrase }}"
-
-    - name: Schedule Daily Backup (Cron)
+    - name: Schedule automated volume backups
       cron:
-        name: "Run Daily Backup"
+        name: "Homelab Volume Backup"
         minute: "0"
-        hour: "5" # Runs at 5:00 AM
-        user: "root" # Run as root to allow stopping/starting docker containers
-        job: "cd /opt/homelab-iac/scripts && ./backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
+        hour: "5"
+        job: "/opt/homelab-iac/scripts/backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
+        user: root
+
+    - name: Sync service configurations from Control Node
+      synchronize:
+        src: ../services/
+        dest: /opt/homelab-iac/services/
+        rsync_opts:
+          - "--exclude=data/"
+          - "--exclude=.git/"
+          - "--exclude=*.example"
 
   handlers:
-  - name: Restart Docker
-    service:
-      name: docker
-      state: restarted
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted
