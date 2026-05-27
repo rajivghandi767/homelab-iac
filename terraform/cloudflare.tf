@@ -2,36 +2,57 @@ data "cloudflare_zone" "main" {
   name = "rajivwallace.com"
 }
 
-# --- 1. Public Edge (Proxied via Cloudflare) ---
-# These are safe to expose because NPM handles the SSL/Auth
+# 1. The Anchor: Root A Record
 resource "cloudflare_record" "root" {
   zone_id = data.cloudflare_zone.main.id
   name    = "@"
-  value   = var.homelab_public_ip
+  content = var.homelab_public_ip
   type    = "A"
-  proxied = true 
-}
-
-resource "cloudflare_record" "public_cnames" {
-  for_each = toset(["www", "trivia-api", "trivia", "portfolio-api", "portfolio", "jenkins", "svt", "svt-api", "jellyfin", "vpn"])
-  
-  zone_id = data.cloudflare_zone.main.id
-  name    = each.key
-  value   = "rajivwallace.com"
-  type    = "CNAME"
   proxied = true
 }
 
-# --- 2. Private/Local Access (Direct LAN IP) ---
-# These bypass Cloudflare Proxy. Useful for admin panels you don't want exposed 
-# to the public internet, or for split-horizon DNS inside your home.
+# 2. Public Services (The web infrastructure you control)
+resource "cloudflare_record" "public_services" {
+  for_each = toset([
+    "www",
+    "portfolio-api", 
+    "trivia", 
+    "trivia-api",
+    "prop-ferry",
+    "prop-ferry-api",  
+    "svt", 
+    "svt-api",
+    "jenkins", 
+    "jellyfin", 
+    "vpn"
+  ])
+  
+  zone_id = data.cloudflare_zone.main.id
+  name    = each.key
+  content = var.homelab_public_ip
+  type    = "A"
+  proxied = true
+}
+
+# 3. Local Services (Your internal LAN infrastructure)
 resource "cloudflare_record" "local_services" {
-  for_each = toset(["vault", "portainer", "nginx", "pgadmin", "unifi", "redis"])
+  for_each = toset([
+    "vault", 
+    "portainer", 
+    "nginx", 
+    "pgadmin", 
+    "unifi", 
+    "redis", 
+    "alertmanager", 
+    "cadvisor", 
+    "grafana", 
+    "pihole", 
+    "prometheus",
+  ])
 
   zone_id = data.cloudflare_zone.main.id
   name    = each.key
-  value   = var.local_network_ip # e.g., 192.168.1.100
+  content = var.local_network_ip
   type    = "A"
-  proxied = false 
-  # Note: You must be on your home Wi-Fi/VPN to access these!
+  proxied = false
 }

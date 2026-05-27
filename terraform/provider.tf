@@ -8,8 +8,9 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
     }
+  }
   backend "gcs" {
-    bucket  = "rajiv-homelab-tf-state" # Manually create this ONE bucket in GCP Console first
+    bucket  = "rajiv-homelab-tf-state"
     prefix  = "terraform/state"
   }
 }
