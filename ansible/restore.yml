@@ -9,7 +9,6 @@
     local_staging_dir: "/tmp/homelab_backups_staging"
     remote_backup_dir: "/opt/homelab-iac/backups/downloads"
     restore_map:
-      # Core
       - { file: "jenkins", volume: "jenkins_data", type: "volume" }
       - { file: "vault_data", volume: "vault_data", type: "volume" }
       - { file: "npm_data", volume: "npm_data", type: "volume" }
@@ -17,14 +16,11 @@
       - { file: "pihole_config", volume: "pihole_config", type: "volume" }
       - { file: "pihole_dnsmasq", volume: "pihole_dnsmasq", type: "volume" }
       - { file: "portainer_data", volume: "portainer_data", type: "volume" }
-      # UniFi
       - { file: "unifi_db_data", volume: "unifi_db_data", type: "volume" }
       - { file: "unifi_config", volume: "unifi_config", type: "volume" }
-      # Ops & Media
       - { file: "pgadmin_data", volume: "pgadmin_data", type: "volume" }
       - { file: "grafana_data", volume: "grafana_data", type: "volume" }
       - { file: "jellyfin_config", volume: "jellyfin_config", type: "volume" }
-      # Logical DB
       - { file: "postgres_logical", volume: "none", type: "sql" }
 
   pre_tasks:
@@ -34,12 +30,9 @@
       file:
         path: "{{ local_staging_dir }}"
         state: directory
-        mode: '0700' # Strict permissions on the Mac
+        mode: '0700'
 
   tasks:
-    # ==================================================
-    # STAGE 1: CONTROL NODE (REMOTE MACHINE) OPERATIONS
-    # ==================================================
     - name: Secure Retrieval and Decryption (Executed on Control Node)
       delegate_to: localhost
       become: no
@@ -52,7 +45,6 @@
             dest: "{{ local_staging_dir }}/{{ item.file }}.tar.gz.gpg"
             project: "{{ gcp_project_id }}"
             auth_kind: serviceaccount
-            # Assuming Dashlane drops the key here during your runtime prep
             service_account_file: "../secrets/gcp-credentials.json" 
           loop: "{{ restore_map }}"
 
@@ -62,11 +54,8 @@
             -o {{ local_staging_dir }}/{{ item.file }}.tar.gz \
             -d {{ local_staging_dir }}/{{ item.file }}.tar.gz.gpg
           loop: "{{ restore_map }}"
-          no_log: true # Never log the passphrase
+          no_log: true 
 
-    # ==========================================
-    # STAGE 2: TARGET NODE (SERVER) OPERATIONS
-    # ==========================================
     - name: Ensure remote download directory exists
       file:
         path: "{{ remote_backup_dir }}"

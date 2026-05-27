@@ -55,7 +55,7 @@
         user: root
 
     - name: Sync service configurations from Control Node
-      synchronize:
+      ansible.posix.synchronize:
         src: ../services/
         dest: /opt/homelab-iac/services/
         rsync_opts:

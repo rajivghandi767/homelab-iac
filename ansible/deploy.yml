@@ -33,8 +33,10 @@
       loop:
         - postgres-core
         - redis
+        - pgadmin
 
     # --- TIER 3.5: Database Data Restoration ---
+    # This must execute while Postgres is running but before Jenkins/Apps connect
     - name: Tier 3.5 | Check for pending logical database restore
       stat:
         path: "/opt/homelab-iac/backups/downloads/postgres_logical.tar.gz"
@@ -48,7 +50,7 @@
           args:
             chdir: "/opt/homelab-iac/backups/downloads"
 
-        - name: Wait for Postgres to accept connections (Double Check)
+        - name: Wait for Postgres to accept connections
           command: docker exec postgres-core pg_isready -U {{ postgres_root_user }}
           register: pg_ready
           until: pg_ready.rc == 0
@@ -66,8 +68,7 @@
             - "/opt/homelab-iac/backups/downloads/postgres_logical.tar.gz"
             - "/opt/homelab-iac/backups/downloads/postgres_logical.sql"
 
-    # --- TIER 4: Control Plane & Observability ---
-    # Jenkins boots last, ensuring Vault and Postgres are ready for its CI/CD pipelines
+    # --- TIER 4: Control Plane, Observability, & Media ---
     - name: Tier 4 | Boot Control Plane
       community.docker.docker_compose_v2:
         project_src: "/opt/homelab-iac/services/{{ item }}"
@@ -79,3 +80,4 @@
         - monitoring
         - core/watchtower
         - core/unifi-controller
+        - media/jellyfin
