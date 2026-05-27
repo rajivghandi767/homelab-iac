@@ -38,6 +38,7 @@
         dest: /etc/docker/daemon.json
         content: |
           {
+            "data-root": "/mnt/dockerdata",
             "log-driver": "json-file",
             "log-opts": {
               "max-size": "10m",
@@ -60,6 +61,7 @@
         dest: /opt/homelab-iac/services/
         rsync_opts:
           - "--exclude=data/"
+          - "--exclude=apps/"
           - "--exclude=.git/"
           - "--exclude=*.example"
 
