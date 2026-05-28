@@ -52,6 +52,7 @@
         name: "Homelab Volume Backup"
         minute: "0"
         hour: "5"
+        weekday: "1"
         job: "/opt/homelab-iac/scripts/backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
         user: root
 
