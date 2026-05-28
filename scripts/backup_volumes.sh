@@ -4,7 +4,7 @@ set -e
 # --- Configuration ---
 BACKUP_ROOT="/opt/homelab-iac/backups/staging"
 DATE=$(date +%Y-%m-%d)
-GCS_BUCKET="gs://homelab-backups-rajiv" 
+GCS_BUCKET="gs://homelab-backups-rajiv-wallace" 
 SECRETS_FILE="/opt/homelab-iac/services/database/postgres-core/.env"
 GLOBAL_SECRETS="/opt/homelab-iac/secrets/.env"
 
