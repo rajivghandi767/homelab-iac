@@ -52,3 +52,4 @@ svt_prod_db_name: "svt-prod"
 # DNS Upstreams (Quad 9 & Local)
 pihole_dns_1: "127.0.0.1"
 pihole_dns_2: "9.9.9.9"
+maxdbdays: "1"
