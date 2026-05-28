@@ -28,10 +28,6 @@
         - database
         - monitoring
         - media
-        - portfolio
-        - trivia
-        - prop-ferry
-        - svt
 
     - name: Enforce Docker log rotation policy
       copy:
