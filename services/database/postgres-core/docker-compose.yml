@@ -41,7 +41,6 @@ services:
 volumes:
   postgres_core_data:
     name: postgres_core_data
-    external: true
 
 networks:
   database:
