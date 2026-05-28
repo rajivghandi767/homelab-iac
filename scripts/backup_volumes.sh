@@ -14,9 +14,24 @@ source $SECRETS_FILE
 
 mkdir -p $BACKUP_ROOT
 
-# 1. DOCKER VOLUME BACKUPS (Apps that use flat files/sqlite/mongo)
+# --- Helper Function for GCP Upload ---
+upload_to_gcs() {
+    local FILE_PATH=$1
+    local FILENAME=$(basename $FILE_PATH)
+    
+    docker run --rm \
+        -v $BACKUP_ROOT:/backup \
+        -e GCP_SA_JSON="$GCS_SA_KEY_JSON" \
+        google/cloud-cli:alpine \
+        sh -c "echo \"\$GCP_SA_JSON\" > /tmp/key.json && \
+               gcloud auth activate-service-account --key-file=/tmp/key.json && \
+               gsutil cp /backup/$FILENAME $GCS_BUCKET/$DATE/$FILENAME && \
+               gsutil cp /backup/$FILENAME $GCS_BUCKET/latest/$FILENAME && \
+               rm -f /tmp/key.json"
+}
+
+# 1. DOCKER VOLUME BACKUPS
 VOLUMES=(
-    # Core Infrastructure
     "jenkins:jenkins_data:jenkins"
     "vault:vault_data:vault_data"
     "nginx-proxy-manager:npm_data:npm_data"
@@ -24,16 +39,10 @@ VOLUMES=(
     "pihole:pihole_config:pihole_config"
     "pihole:pihole_dnsmasq:pihole_dnsmasq"
     "portainer:portainer_data:portainer_data"
-
-    # UniFi Controller (Targeting the DB for safe shutdown)
     "unifi-db:unifi_db_data:unifi_db_data"
     "unifi-db:unifi_config:unifi_config"
-
-    # Database Admins & Observability
     "pgadmin:pgadmin_data:pgadmin_data"
     "grafana:grafana_data:grafana_data"
-
-    # Media
     "jellyfin:jellyfin_config:jellyfin_config"
 )
 
@@ -43,7 +52,6 @@ for entry in "${VOLUMES[@]}"; do
     IFS=':' read -r CONTAINER VOLUME FILENAME <<< "$entry"
     echo "Processing Volume: $FILENAME..."
 
-    # Pause container to prevent flat-file corruption
     docker stop $CONTAINER || echo "Warning: $CONTAINER not running."
 
     docker run --rm \
@@ -57,24 +65,23 @@ for entry in "${VOLUMES[@]}"; do
         -c -o $BACKUP_ROOT/$FILENAME.tar.gz.gpg $BACKUP_ROOT/$FILENAME.tar.gz
     
     rm $BACKUP_ROOT/$FILENAME.tar.gz
-    gsutil cp $BACKUP_ROOT/$FILENAME.tar.gz.gpg $GCS_BUCKET/$DATE/$FILENAME.tar.gz.gpg
-    gsutil cp $BACKUP_ROOT/$FILENAME.tar.gz.gpg $GCS_BUCKET/latest/$FILENAME.tar.gz.gpg
+    
+    echo "Uploading $FILENAME.tar.gz.gpg to GCP..."
+    upload_to_gcs "$BACKUP_ROOT/$FILENAME.tar.gz.gpg"
 done
 
-# 2. LOGICAL DATABASE BACKUP (Zero-Downtime)
+# 2. LOGICAL DATABASE BACKUP
 echo "Processing Logical DB Dump..."
-# Dump directly to the staging folder without stopping the container
-docker exec postgres-core pg_dumpall -U "$POSTGRES_USER" > $BACKUP_ROOT/postgres_logical.sql
+docker exec postgres-core pg_dumpall -U "$POSTGRES_ROOT_USER" > $BACKUP_ROOT/postgres_logical.sql
 
-# Compress and Encrypt
 tar -czf $BACKUP_ROOT/postgres_logical.tar.gz -C $BACKUP_ROOT postgres_logical.sql
 gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_KEY" \
     -c -o $BACKUP_ROOT/postgres_logical.tar.gz.gpg $BACKUP_ROOT/postgres_logical.tar.gz
 
 rm $BACKUP_ROOT/postgres_logical.sql $BACKUP_ROOT/postgres_logical.tar.gz
-gsutil cp $BACKUP_ROOT/postgres_logical.tar.gz.gpg $GCS_BUCKET/$DATE/postgres_logical.tar.gz.gpg
-gsutil cp $BACKUP_ROOT/postgres_logical.tar.gz.gpg $GCS_BUCKET/latest/postgres_logical.tar.gz.gpg
 
-# Cleanup Staging
+echo "Uploading postgres_logical.tar.gz.gpg to GCP..."
+upload_to_gcs "$BACKUP_ROOT/postgres_logical.tar.gz.gpg"
+
 rm -rf $BACKUP_ROOT/*
 echo "Backup Complete!"
