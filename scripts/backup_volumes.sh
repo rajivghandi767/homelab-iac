@@ -22,7 +22,7 @@ upload_to_gcs() {
     docker run --rm \
         -v $BACKUP_ROOT:/backup \
         -e GCP_SA_JSON="$GCS_SA_KEY_JSON" \
-        google/cloud-cli:alpine \
+        google/cloud-sdk:alpine \
         sh -c "echo \"\$GCP_SA_JSON\" > /tmp/key.json && \
                gcloud auth activate-service-account --key-file=/tmp/key.json && \
                gsutil cp /backup/$FILENAME $GCS_BUCKET/$DATE/$FILENAME && \
