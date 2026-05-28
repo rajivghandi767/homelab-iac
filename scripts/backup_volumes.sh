@@ -14,6 +14,9 @@ source $SECRETS_FILE
 
 mkdir -p $BACKUP_ROOT
 
+# Dynamically mount the RAM disk (1.5GB limit) to eliminate SSD wear
+mount -t tmpfs -o size=1536M tmpfs $BACKUP_ROOT
+
 # --- Helper Function for GCP Upload ---
 upload_to_gcs() {
     local FILE_PATH=$1
@@ -47,6 +50,8 @@ VOLUMES=(
 )
 
 echo "Starting Backup Job - $DATE"
+# Start the stopwatch
+SECONDS=0
 
 for entry in "${VOLUMES[@]}"; do
     IFS=':' read -r CONTAINER VOLUME FILENAME <<< "$entry"
@@ -64,10 +69,14 @@ for entry in "${VOLUMES[@]}"; do
     gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_KEY" \
         -c -o $BACKUP_ROOT/$FILENAME.tar.gz.gpg $BACKUP_ROOT/$FILENAME.tar.gz
     
+    # Delete the unencrypted tarball from RAM
     rm $BACKUP_ROOT/$FILENAME.tar.gz
     
     echo "Uploading $FILENAME.tar.gz.gpg to GCP..."
     upload_to_gcs "$BACKUP_ROOT/$FILENAME.tar.gz.gpg"
+
+    # OOM PROTECTION: Delete the encrypted file from RAM immediately after upload
+    rm $BACKUP_ROOT/$FILENAME.tar.gz.gpg
 done
 
 # 2. LOGICAL DATABASE BACKUP
@@ -83,5 +92,12 @@ rm $BACKUP_ROOT/postgres_logical.sql $BACKUP_ROOT/postgres_logical.tar.gz
 echo "Uploading postgres_logical.tar.gz.gpg to GCP..."
 upload_to_gcs "$BACKUP_ROOT/postgres_logical.tar.gz.gpg"
 
+# Cleanup and Unmount RAM Disk
 rm -rf $BACKUP_ROOT/*
-echo "Backup Complete!"
+umount $BACKUP_ROOT
+
+# Calculate Duration
+DURATION_MINUTES=$((SECONDS / 60))
+DURATION_SECONDS=$((SECONDS % 60))
+
+echo "Backup Complete! Process took $DURATION_MINUTES mins $DURATION_SECONDS s."
