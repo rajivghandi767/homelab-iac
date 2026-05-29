@@ -61,6 +61,14 @@
           - "--exclude=apps/"
           - "--exclude=.git/"
           - "--exclude=*.example"
+      
+    - name: Ensure Apps directory exists with Jenkins ownership
+      ansible.builtin.file:
+        path: /opt/homelab-iac/services/apps
+        state: directory
+        owner: dietpi
+        group: dietpi
+        recurse: yes
 
   handlers:
     - name: Restart Docker
