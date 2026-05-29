@@ -14,10 +14,7 @@ services:
       TZ: ${TZ}
       WEBPASSWORD: ${SECURE_PASSWORD}
       MAXDBDAYS: ${MAXDBDAYS}
-      REV_SERVER: ${REV_SERVER}
-      REV_SERVER_TARGET: ${REV_SERVER_TARGET}
-      REV_SERVER_CIDR: ${REV_SERVER_CIDR}
-      REV_SERVER_DOMAIN: ${REV_SERVER_DOMAIN}
+      FTLCONF_dns_revServers: ${FTLCONF_dns_revServers}
     volumes:
       - pihole_config:/etc/pihole/
       - pihole_dnsmasq:/etc/dnsmasq.d/

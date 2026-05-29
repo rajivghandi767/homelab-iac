@@ -79,11 +79,12 @@
       loop: "{{ restore_map }}"
       when: item.type == 'volume'
 
-    - name: Clean up remote archives on the Pi
+    - name: Clean up remote volume archives on the Pi
       file:
         path: "{{ remote_backup_dir }}/{{ item.file }}.tar.gz"
         state: absent
       loop: "{{ restore_map }}"
+      when: item.type == 'volume'
 
   post_tasks:
     - name: Secure Cleanup on Control Node (Shred data)

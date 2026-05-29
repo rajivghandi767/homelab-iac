@@ -13,6 +13,8 @@ source $GLOBAL_SECRETS
 source $SECRETS_FILE
 
 mkdir -p $BACKUP_ROOT
+# Guarantee cleanup and unmount upon script exit (success or failure)
+trap 'rm -rf $BACKUP_ROOT/*; umount $BACKUP_ROOT || true' EXIT
 
 # Dynamically mount the RAM disk (1.5GB limit) to eliminate SSD wear
 mount -t tmpfs -o size=1536M tmpfs $BACKUP_ROOT
@@ -91,10 +93,6 @@ rm $BACKUP_ROOT/postgres_logical.sql $BACKUP_ROOT/postgres_logical.tar.gz
 
 echo "Uploading postgres_logical.tar.gz.gpg to GCP..."
 upload_to_gcs "$BACKUP_ROOT/postgres_logical.tar.gz.gpg"
-
-# Cleanup and Unmount RAM Disk
-rm -rf $BACKUP_ROOT/*
-umount $BACKUP_ROOT
 
 # Calculate Duration
 DURATION_MINUTES=$((SECONDS / 60))

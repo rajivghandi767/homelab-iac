@@ -26,7 +26,7 @@ services:
       - SVT_PROD_DB_PASSWORD=${SVT_PROD_DB_PASSWORD}
       - SVT_PROD_DB_NAME=${SVT_PROD_DB_NAME}
     volumes:
-      - postgres_core_data:/var/lib/postgresql/data/
+      - postgres_core_data:/var/lib/postgresql
       - ./init:/docker-entrypoint-initdb.d
     networks:
       - database
