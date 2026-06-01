@@ -36,6 +36,14 @@ scrape_configs:
     scrape_interval: 10s
     scrape_timeout: 5s
 
+  # Silicon Valley Trail Django backend (via Nginx Proxy)
+  - job_name: 'svt-backend'
+    static_configs:
+      - targets: ['svt-nginx:80']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
   # System Metrics
   - job_name: 'node-exporter'
     static_configs:

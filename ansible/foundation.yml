@@ -15,8 +15,8 @@
       apt:
         pkg:
           - curl
-          - rsync           # Required for Ansible synchronize module
-          - python3-docker  # Required for Ansible docker_network module
+          - rsync           
+          - python3-docker 
         state: present
 
     - name: Ensure Docker networks exist safely
@@ -48,9 +48,23 @@
         name: "Homelab Volume Backup"
         minute: "0"
         hour: "0"
-        weekday: "1"
+        # weekday: "1"
         job: "/opt/homelab-iac/scripts/backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
         user: root
+
+    - name: Ensure secure global secrets directory exists
+      ansible.builtin.file:
+        path: /opt/homelab-iac/secrets
+        state: directory
+        mode: '0700'
+        owner: root
+
+    - name: Generate Global Scripts Environment File
+      template:
+        src: templates/global_secrets.env.j2
+        dest: /opt/homelab-iac/secrets/.env
+        mode: '0600'
+        owner: root
 
     - name: Sync service configurations from Control Node
       ansible.posix.synchronize:
@@ -61,6 +75,17 @@
           - "--exclude=apps/"
           - "--exclude=.git/"
           - "--exclude=*.example"
+
+    - name: Sync scripts directory from Control Node
+      ansible.posix.synchronize:
+        src: ../scripts/
+        dest: /opt/homelab-iac/scripts/
+        
+    - name: Ensure backup script is executable
+      ansible.builtin.file:
+        path: /opt/homelab-iac/scripts/backup_volumes.sh
+        mode: '0755'
+        owner: root
       
     - name: Ensure Apps directory exists with Jenkins ownership
       ansible.builtin.file:
@@ -69,6 +94,20 @@
         owner: dietpi
         group: dietpi
         recurse: yes
+
+    - name: Configure logrotate for homelab backup log
+      copy:
+        dest: /etc/logrotate.d/homelab_backup
+        content: |
+          /var/log/homelab_backup.log {
+              weekly
+              rotate 2
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0644 root root
+          }
 
   handlers:
     - name: Restart Docker
