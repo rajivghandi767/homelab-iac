@@ -76,6 +76,13 @@
           - "--exclude=.git/"
           - "--exclude=*.example"
 
+    - name: Generate Prometheus Vault Token
+      template:
+        src: templates/vault_token.j2
+        dest: /opt/homelab-iac/services/monitoring/prometheus/vault_token
+        mode: '0600'
+        owner: root
+    
     - name: Sync scripts directory from Control Node
       ansible.posix.synchronize:
         src: ../scripts/
