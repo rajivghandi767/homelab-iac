@@ -29,3 +29,23 @@ resource "google_storage_bucket" "homelab_backups" {
 output "backup_bucket_url" {
   value = google_storage_bucket.homelab_backups.url
 }
+
+# --- GCP SECRET MANAGER DATA BLOCKS ---
+
+data "google_secret_manager_secret_version" "cf_token" {
+  project = "homelab-iac-rajiv"
+  secret  = "cloudflare_api_token"
+  version = "latest"
+}
+
+data "google_secret_manager_secret_version" "public_ip" {
+  project = "homelab-iac-rajiv"
+  secret  = "homelab_public_ip"
+  version = "latest"
+}
+
+data "google_secret_manager_secret_version" "local_ip" {
+  project = "homelab-iac-rajiv"
+  secret  = "local_network_ip"
+  version = "latest"
+}

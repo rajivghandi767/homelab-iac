@@ -16,11 +16,11 @@ terraform {
 }
 
 provider "google" {
-  credentials = file(var.gcp_credentials_file)
-  project     = var.gcp_project_id
-  region      = var.gcp_region
+  project = "homelab-iac-rajiv"
+  region  = var.gcp_region
 }
 
 provider "cloudflare" {
-  api_token = var.cloudflare_api_token
+  # Dynamically injected from the GCP Secret Manager data block
+  api_token = data.google_secret_manager_secret_version.cf_token.secret_data
 }

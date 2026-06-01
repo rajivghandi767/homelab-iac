@@ -6,7 +6,7 @@ data "cloudflare_zone" "main" {
 resource "cloudflare_record" "root" {
   zone_id = data.cloudflare_zone.main.id
   name    = "@"
-  content = var.homelab_public_ip
+  content = data.google_secret_manager_secret_version.public_ip.secret_data
   type    = "A"
   proxied = true
 }
@@ -29,7 +29,7 @@ resource "cloudflare_record" "public_services" {
   
   zone_id = data.cloudflare_zone.main.id
   name    = each.key
-  content = var.homelab_public_ip
+  content = data.google_secret_manager_secret_version.public_ip.secret_data
   type    = "A"
   proxied = true
 }
@@ -52,7 +52,7 @@ resource "cloudflare_record" "local_services" {
 
   zone_id = data.cloudflare_zone.main.id
   name    = each.key
-  content = var.local_network_ip
+  content = data.google_secret_manager_secret_version.local_ip.secret_data
   type    = "A"
   proxied = false
 }
