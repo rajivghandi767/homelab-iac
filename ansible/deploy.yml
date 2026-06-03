@@ -6,11 +6,15 @@
     - group_vars/all/config.yml
     - group_vars/all/secrets.yml
 
+  vars:
+    # --- GLOBAL CONSTANTS (Single Source of Truth) ---
+    base_dir: "/opt/homelab-iac"
+
   tasks:
     # --- TIER 1: Network & Ingress ---
     - name: Tier 1 | Boot Core Networking (Nginx, Pihole)
       community.docker.docker_compose_v2:
-        project_src: "/opt/homelab-iac/services/core/{{ item }}"
+        project_src: "{{ base_dir }}/services/core/{{ item }}"
         state: present
         wait: true
       loop:
@@ -20,14 +24,14 @@
     # --- TIER 2: State & Secrets ---
     - name: Tier 2 | Boot HashiCorp Vault
       community.docker.docker_compose_v2:
-        project_src: /opt/homelab-iac/services/core/vault
+        project_src: "{{ base_dir }}/services/core/vault"
         state: present
         wait: true
 
     # --- TIER 3: Databases & Caching ---
     - name: Tier 3 | Boot Database Systems
       community.docker.docker_compose_v2:
-        project_src: "/opt/homelab-iac/services/database/{{ item }}"
+        project_src: "{{ base_dir }}/services/database/{{ item }}"
         state: present
         wait: true
       loop:
@@ -39,7 +43,7 @@
     # This must execute while Postgres is running but before Jenkins/Apps connect
     - name: Tier 3.5 | Check for pending logical database restore
       stat:
-        path: "/opt/homelab-iac/backups/downloads/postgres_logical.tar.gz"
+        path: "{{ base_dir }}/backups/downloads/postgres_logical.tar.gz"
       register: db_backup_archive
 
     - name: Tier 3.5 | Execute Zero-Downtime DB Restore
@@ -48,7 +52,7 @@
         - name: Extract SQL dump
           command: tar -xzf postgres_logical.tar.gz
           args:
-            chdir: "/opt/homelab-iac/backups/downloads"
+            chdir: "{{ base_dir }}/backups/downloads"
 
         - name: Wait for Postgres to accept connections
           command: docker exec postgres-core pg_isready -U {{ postgres_root_user }}
@@ -58,20 +62,21 @@
           delay: 5
 
         - name: Pipe SQL dump into running Postgres container
-          shell: "cat /opt/homelab-iac/backups/downloads/postgres_logical.sql | docker exec -i postgres-core psql -U {{ postgres_root_user }}"
+          shell: "cat {{ base_dir }}/backups/downloads/postgres_logical.sql | docker exec -i postgres-core psql -U {{ postgres_root_user }}"
+          no_log: "{{ not (show_secrets | default(false) | bool) }}"
           
         - name: Cleanup remote SQL files
           file:
             path: "{{ item }}"
             state: absent
           loop:
-            - "/opt/homelab-iac/backups/downloads/postgres_logical.tar.gz"
-            - "/opt/homelab-iac/backups/downloads/postgres_logical.sql"
+            - "{{ base_dir }}/backups/downloads/postgres_logical.tar.gz"
+            - "{{ base_dir }}/backups/downloads/postgres_logical.sql"
 
     # --- TIER 4: Control Plane, Observability, & Media ---
     - name: Tier 4 | Boot Control Plane
       community.docker.docker_compose_v2:
-        project_src: "/opt/homelab-iac/services/{{ item }}"
+        project_src: "{{ base_dir }}/services/{{ item }}"
         state: present
         wait: true
       loop:
