@@ -4,6 +4,10 @@
   become: yes
   vars:
     ansible_python_interpreter: /usr/bin/python3
+    # --- GLOBAL CONSTANTS (Single Source of Truth) ---
+    base_dir: "/opt/homelab-iac"
+    sys_user: "dietpi"
+    sys_group: "dietpi"
 
   tasks:
     - name: Update apt cache
@@ -16,7 +20,8 @@
         pkg:
           - curl
           - rsync           
-          - python3-docker 
+          - python3-docker
+          - pigz
         state: present
 
     - name: Ensure Docker networks exist safely
@@ -43,65 +48,86 @@
           }
       notify: Restart Docker
 
+    # --- 1. SCAFFOLDING TASK (Hardened Permissions) ---
+    - name: Ensure base homelab directory structure exists
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: "{{ item.mode | default('0755') }}"
+        owner: "{{ item.owner | default('root') }}"
+        group: "{{ item.group | default('root') }}"
+      loop:
+        # 0755: Required for the unprivileged dietpi user (and Jenkins) to traverse down to the apps directory
+        - { path: '{{ base_dir }}' } 
+        - { path: '{{ base_dir }}/services' } 
+        - { path: '{{ base_dir }}/services/apps', owner: '{{ sys_user }}', group: '{{ sys_group }}' } 
+        
+        # 0700: Strict lockdown for secrets, scripts, and backups. Only root can read/execute/traverse.
+        - { path: '{{ base_dir }}/secrets', mode: '0700' }
+        - { path: '{{ base_dir }}/scripts', mode: '0700' }
+        - { path: '{{ base_dir }}/backups', mode: '0700' }
+        - { path: '{{ base_dir }}/backups/staging', mode: '0700' } 
+        - { path: '{{ base_dir }}/backups/downloads', mode: '0700' } 
+
     - name: Schedule automated volume backups
       cron:
         name: "Homelab Volume Backup"
         minute: "0"
         hour: "0"
-        # weekday: "1"
-        job: "/opt/homelab-iac/scripts/backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
+        job: "{{ base_dir }}/scripts/backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
         user: root
-
-    - name: Ensure secure global secrets directory exists
-      ansible.builtin.file:
-        path: /opt/homelab-iac/secrets
-        state: directory
-        mode: '0700'
-        owner: root
 
     - name: Generate Global Scripts Environment File
       template:
         src: templates/global_secrets.env.j2
-        dest: /opt/homelab-iac/secrets/.env
+        dest: "{{ base_dir }}/secrets/.env"
         mode: '0600'
         owner: root
+      no_log: "{{ not (show_secrets | default(false) | bool) }}"
 
     - name: Sync service configurations from Control Node
       ansible.posix.synchronize:
         src: ../services/
-        dest: /opt/homelab-iac/services/
+        dest: "{{ base_dir }}/services/"
         rsync_opts:
           - "--exclude=data/"
           - "--exclude=apps/"
           - "--exclude=.git/"
           - "--exclude=*.example"
+          - "--exclude=*.j2"
+          - "--exclude=*.env"
 
-    - name: Generate Prometheus Vault Token
-      template:
-        src: templates/vault_token.j2
-        dest: /opt/homelab-iac/services/monitoring/prometheus/vault_token
+    # --- 2. DYNAMIC .J2 TEMPLATING ---
+    - name: Find all .j2 templates in services directory locally
+      delegate_to: localhost
+      become: false
+      ansible.builtin.find:
+        paths: "../services"
+        patterns: "*.j2"
+        hidden: yes
+        recurse: yes
+      register: j2_templates
+
+    - name: Dynamically generate configuration files from .j2 templates
+      ansible.builtin.template:
+        src: "{{ item.path }}"
+        dest: "{{ base_dir }}/services/{{ item.path | regex_replace('^.*/services/', '') | regex_replace('\\.j2$', '') }}"
         mode: '0600'
         owner: root
+      loop: "{{ j2_templates.files }}"
+      no_log: "{{ not (show_secrets | default(false) | bool) }}"
     
     - name: Sync scripts directory from Control Node
       ansible.posix.synchronize:
         src: ../scripts/
-        dest: /opt/homelab-iac/scripts/
+        dest: "{{ base_dir }}/scripts/"
         
-    - name: Ensure backup script is executable
+    - name: Ensure backup script is executable by root only
       ansible.builtin.file:
-        path: /opt/homelab-iac/scripts/backup_volumes.sh
-        mode: '0755'
+        path: "{{ base_dir }}/scripts/backup_volumes.sh"
+        mode: '0700'
         owner: root
       
-    - name: Ensure Apps directory exists with Jenkins ownership
-      ansible.builtin.file:
-        path: /opt/homelab-iac/services/apps
-        state: directory
-        owner: dietpi
-        group: dietpi
-        recurse: yes
-
     - name: Configure logrotate for homelab backup log
       copy:
         dest: /etc/logrotate.d/homelab_backup

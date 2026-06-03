@@ -1,28 +1,38 @@
 #!/bin/bash
 
-# --- Configuration ---
-BACKUP_ROOT="/opt/homelab-iac/backups/staging"
-DATE=$(date +%Y-%m-%d)
+# --- Core Parameters ---
+BASE_DIR="/opt/homelab-iac"
 GCS_BUCKET="gs://homelab-backups-rajiv-wallace" 
-SECRETS_FILE="/opt/homelab-iac/services/database/postgres-core/.env"
-GLOBAL_SECRETS="/opt/homelab-iac/secrets/.env"
 
-# Load Passphrases, DB Credentials, and the Backup Webhook from Ansible Vault
-source $GLOBAL_SECRETS
-source $SECRETS_FILE
+# ENFORCE STRICT FILE CREATION MASK
+umask 077
 
-# Start the stopwatch immediately for accurate duration reporting
-SECONDS=0
-HOSTNAME=$(hostname)
+# --- Derived Paths ---
+BACKUP_ROOT="${BASE_DIR}/backups/staging"
+DOWNLOAD_ROOT="${BASE_DIR}/backups/downloads"
+POSTGRES_SECRETS="${BASE_DIR}/services/database/postgres-core/.env"
+GLOBAL_SECRETS="${BASE_DIR}/secrets/.env"
+DATE=$(date +%Y-%m-%d)
 
 # --- Observability: Structured JSON Logging for Grafana Loki ---
 log_event() {
     local LEVEL=$1
     local MESSAGE=$2
     local TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    # Output to stdout and append to the system log file simultaneously
     echo "{\"timestamp\": \"$TIMESTAMP\", \"level\": \"$LEVEL\", \"service\": \"backup_job\", \"message\": \"$MESSAGE\"}" | tee -a /var/log/homelab_backup.log
 }
+
+# --- Pre-Flight Assertions ---
+if [ ! -f "$GLOBAL_SECRETS" ] || [ ! -f "$POSTGRES_SECRETS" ]; then
+    log_event "FATAL" "Required .env files are missing. Did the Ansible dynamic templating task run?"
+    exit 1
+fi
+
+source "$GLOBAL_SECRETS"
+source "$POSTGRES_SECRETS"
+
+SECONDS=0
+HOSTNAME=$(hostname)
 
 # --- Resilience: Alerting & Cleanup Exit Trap ---
 cleanup_and_alert() {
@@ -35,55 +45,54 @@ cleanup_and_alert() {
         curl -s -H "Content-Type: application/json" -X POST -d "{
           \"embeds\": [{
             \"title\": \"🚨 Backup Failed ($HOSTNAME)\",
-            \"description\": \"The backup script exited prematurely on an error block. Inspect /var/log/homelab_backup.log or check your Grafana dashboard.\",
+            \"description\": \"The backup script exited prematurely on an error block. Inspect /var/log/homelab_backup.log.\",
             \"color\": 16711680
           }]
-        }" $BACKUP_DISCORD_WEBHOOK_URL > /dev/null
+        }" "$BACKUP_DISCORD_WEBHOOK_URL" > /dev/null
     else
         log_event "INFO" "Backup pipeline executed successfully in ${DURATION_MINUTES}m ${DURATION_SECONDS}s."
         curl -s -H "Content-Type: application/json" -X POST -d "{
           \"embeds\": [{
             \"title\": \"✅ Backup Complete ($HOSTNAME)\",
-            \"description\": \"All Docker volumes and logical database dumps successfully encrypted and synchronized to Google Cloud Storage in ${DURATION_MINUTES}m ${DURATION_SECONDS}s.\",
+            \"description\": \"All Docker volumes and databases successfully encrypted and synchronized in ${DURATION_MINUTES}m ${DURATION_SECONDS}s.\",
             \"color\": 65280
           }]
-        }" $BACKUP_DISCORD_WEBHOOK_URL > /dev/null
+        }" "$BACKUP_DISCORD_WEBHOOK_URL" > /dev/null
     fi
 
     log_event "INFO" "Executing file cleanup and staging environment takedown."
-    rm -rf $BACKUP_ROOT/*
-    if mountpoint -q $BACKUP_ROOT; then
-        umount $BACKUP_ROOT || log_event "WARN" "Failed to cleanly unmount $BACKUP_ROOT."
+    rm -rf "$BACKUP_ROOT"/*
+    if mountpoint -q "$BACKUP_ROOT"; then
+        umount "$BACKUP_ROOT" || log_event "WARN" "Failed to cleanly unmount $BACKUP_ROOT."
     fi
 }
 
-# Bind the lifecycle trap to the EXIT state
 trap 'cleanup_and_alert' EXIT
 
 # --- Storage Layer: Idempotent Mount with Disk Fallback ---
-mkdir -p $BACKUP_ROOT
-if ! mountpoint -q $BACKUP_ROOT; then
-    log_event "INFO" "Attempting to mount 1.5GB tmpfs partition to $BACKUP_ROOT to preserve MicroSD health."
-    if ! mount -t tmpfs -o size=1536M tmpfs $BACKUP_ROOT; then
-        log_event "WARN" "tmpfs mounting failed. Spawning staging area directly on physical flash memory instead."
+mkdir -p -m 0700 "$BACKUP_ROOT"
+mkdir -p -m 0700 "$DOWNLOAD_ROOT"
+
+if ! mountpoint -q "$BACKUP_ROOT"; then
+    log_event "INFO" "Attempting to mount 1.5GB tmpfs partition to $BACKUP_ROOT to preserve flash memory health."
+    if ! mount -t tmpfs -o size=1536M tmpfs "$BACKUP_ROOT"; then
+        log_event "WARN" "tmpfs mounting failed. Spawning staging area directly on physical disk instead."
     fi
 fi
 
-# --- Security: Secure GCP Upload Function (No Env Secret Leak) ---
+# --- Security: Secure GCP Upload Function ---
 upload_to_gcs() {
     local FILE_PATH=$1
-    local FILENAME=$(basename $FILE_PATH)
+    local FILENAME=$(basename "$FILE_PATH")
     local KEY_FILE="$BACKUP_ROOT/gcp_temp_key.json"
     
-    # Write the static service account json directly to the encrypted staging mount
     echo "$GCS_SA_KEY_JSON" > "$KEY_FILE"
     chmod 600 "$KEY_FILE"
     
     log_event "INFO" "Streaming $FILENAME to Google Cloud Storage bucket."
     
-    # Mount the key file read-only directly as a volume rather than passing it via '-e'
     docker run --rm \
-        -v $BACKUP_ROOT:/backup \
+        -v "$BACKUP_ROOT":/backup \
         -v "$KEY_FILE":/tmp/key.json:ro \
         gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine \
         sh -c "gcloud auth activate-service-account --key-file=/tmp/key.json && \
@@ -91,10 +100,7 @@ upload_to_gcs() {
                gsutil cp /backup/$FILENAME $GCS_BUCKET/latest/$FILENAME"
                
     local STATUS=$?
-    
-    # Securely overwrite and shred the temporary key file from storage
     shred -u "$KEY_FILE" 2>/dev/null || rm -f "$KEY_FILE"
-    
     return $STATUS
 }
 
@@ -128,42 +134,44 @@ for entry in "${VOLUMES[@]}"; do
     IFS=':' read -r CONTAINER VOLUME FILENAME <<< "$entry"
     log_event "INFO" "Processing serialization target: $FILENAME"
 
-    docker stop $CONTAINER || log_event "WARN" "Container $CONTAINER was not actively running."
+    docker stop "$CONTAINER" || log_event "WARN" "Container $CONTAINER was not actively running."
 
+    # OPTIMIZATION: Piped tar stream into pigz to distribute compression across all 4 CPU cores
     docker run --rm \
-        -v $VOLUME:/source:ro \
-        -v $BACKUP_ROOT:/backup \
-        alpine tar -czf /backup/$FILENAME.tar.gz -C /source .
+        -v "$VOLUME":/source:ro \
+        -v "$BACKUP_ROOT":/backup \
+        alpine sh -c "apk add --no-cache pigz && tar -cf - -C /source . | pigz > /backup/$FILENAME.tar.gz"
     if [ $? -ne 0 ]; then exit 1; fi
 
-    docker start $CONTAINER
+    # Container immediately restarted after tar process completes
+    docker start "$CONTAINER"
 
     gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_KEY" \
-        -c -o $BACKUP_ROOT/$FILENAME.tar.gz.gpg $BACKUP_ROOT/$FILENAME.tar.gz
+        -c -o "$BACKUP_ROOT/$FILENAME.tar.gz.gpg" "$BACKUP_ROOT/$FILENAME.tar.gz"
     if [ $? -ne 0 ]; then exit 1; fi
     
-    rm $BACKUP_ROOT/$FILENAME.tar.gz
+    rm "$BACKUP_ROOT/$FILENAME.tar.gz"
     
     upload_to_gcs "$BACKUP_ROOT/$FILENAME.tar.gz.gpg"
     if [ $? -ne 0 ]; then exit 1; fi
 
-    rm $BACKUP_ROOT/$FILENAME.tar.gz.gpg
+    rm "$BACKUP_ROOT/$FILENAME.tar.gz.gpg"
 done
 
 # 2. LOGICAL DATABASE BACKUP
 log_event "INFO" "Initiating logical engine dump for postgres-core container."
-docker exec postgres-core pg_dumpall -U "$POSTGRES_ROOT_USER" > $BACKUP_ROOT/postgres_logical.sql
+docker exec postgres-core pg_dumpall -U "$POSTGRES_ROOT_USER" > "$BACKUP_ROOT/postgres_logical.sql"
 if [ $? -ne 0 ]; then exit 1; fi
 
-tar -czf $BACKUP_ROOT/postgres_logical.tar.gz -C $BACKUP_ROOT postgres_logical.sql
+# OPTIMIZATION: Leverage host-level pigz for the SQL dump 
+tar -cf - -C "$BACKUP_ROOT" postgres_logical.sql | pigz > "$BACKUP_ROOT/postgres_logical.tar.gz"
 gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_KEY" \
-    -c -o $BACKUP_ROOT/postgres_logical.tar.gz.gpg $BACKUP_ROOT/postgres_logical.tar.gz
+    -c -o "$BACKUP_ROOT/postgres_logical.tar.gz.gpg" "$BACKUP_ROOT/postgres_logical.tar.gz"
 if [ $? -ne 0 ]; then exit 1; fi
 
-rm $BACKUP_ROOT/postgres_logical.sql $BACKUP_ROOT/postgres_logical.tar.gz
+rm "$BACKUP_ROOT/postgres_logical.sql" "$BACKUP_ROOT/postgres_logical.tar.gz"
 
 upload_to_gcs "$BACKUP_ROOT/postgres_logical.tar.gz.gpg"
 if [ $? -ne 0 ]; then exit 1; fi
 
-# Explicitly evaluate success state to drop smoothly into the clean exit trap
 exit 0
