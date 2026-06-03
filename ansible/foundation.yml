@@ -89,6 +89,7 @@
       ansible.posix.synchronize:
         src: ../services/
         dest: "{{ base_dir }}/services/"
+        delete: yes
         rsync_opts:
           - "--exclude=data/"
           - "--exclude=apps/"

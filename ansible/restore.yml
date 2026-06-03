@@ -58,13 +58,13 @@
             -o {{ local_staging_dir }}/{{ item.file }}.tar.gz \
             -d {{ local_staging_dir }}/{{ item.file }}.tar.gz.gpg
           loop: "{{ restore_map }}"
-          no_log: "{{ not (debug_secrets | default(false) | bool) }}"
+          no_log: "{{ not (show_secrets | default(false) | bool) }}"
 
     - name: Ensure remote download directory exists securely
       file:
         path: "{{ remote_backup_dir }}"
         state: directory
-        mode: '0700' # Tightened to match foundation.yml posture
+        mode: '0700'
 
     - name: Push Decrypted Archives to the Pi over SSH
       copy:
