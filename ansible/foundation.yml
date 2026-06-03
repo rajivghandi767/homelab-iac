@@ -118,6 +118,11 @@
       loop: "{{ j2_templates.files }}"
       no_log: "{{ not (show_secrets | default(false) | bool) }}"
     
+    - name: Ensure Prometheus can read the generated Vault token
+      ansible.builtin.file:
+        path: "{{ base_dir }}/services/monitoring/prometheus/vault_token"
+        mode: '0644'
+    
     - name: Sync scripts directory from Control Node
       ansible.posix.synchronize:
         src: ../scripts/
