@@ -11,6 +11,7 @@ gcp-credentials.json
 # Ephemeral UI/API files
 .env
 .env.*
+**/.env
 !.env.j2
 !.env.example
 
@@ -45,7 +46,7 @@ backups/*
 *.sql
 
 # ==============================================================================
-# TIER 4: HOMELAB SERVICE DATA (DOCKER VOLUMES)
+# TIER 4: HOMELAB SERVICE DATA (DOCKER VOLUMES & LIVE STATE)
 # ==============================================================================
 # A strict wildcard approach to prevent any stateful container data from leaking
 services/*/data/
@@ -61,15 +62,15 @@ services/vault/vault_logs/
 services/core/pihole/etc-pihole/
 services/core/pihole/etc-dnsmasq.d/
 services/core/portainer_data/
-services/media/jellyfin/config/
-services/media/jellyfin/cache/
 services/database/postgres_dev_data/
 services/database/pgadmin_data/
 services/monitoring/grafana_data/
 services/monitoring/prometheus_data/
-services/core/unifi-controller/config/data/
-services/core/unifi-controller/config/logs/
-services/core/unifi-controller/config/run/
+
+# Live configuration directories (Protects live application state on the host)
+services/media/jellyfin/config/
+services/media/jellyfin/cache/
+services/core/unifi-controller/config/
 
 # ==============================================================================
 # TIER 5: APPLICATION REPOSITORIES (JENKINS PROVISIONED)
@@ -77,7 +78,6 @@ services/core/unifi-controller/config/run/
 # Jenkins dynamically provisions project folders and deployment manifests 
 # from external application repositories. The IaC repo must ignore all of this
 # to prevent source-of-truth conflicts.
-
 services/apps/*
 !services/apps/.gitkeep
 
@@ -112,5 +112,5 @@ yarn-error.log*
 dist/
 build/
 
-# Mongo DB
+# Database Init Scripts
 init-mongo.js

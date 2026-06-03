@@ -92,6 +92,7 @@
         delete: yes
         rsync_opts:
           - "--exclude=data/"
+          - "--exclude=config/"
           - "--exclude=apps/"
           - "--exclude=.git/"
           - "--exclude=*.example"
