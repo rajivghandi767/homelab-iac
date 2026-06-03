@@ -111,3 +111,6 @@ npm-debug.log*
 yarn-error.log*
 dist/
 build/
+
+# Mongo DB
+init-mongo.js
