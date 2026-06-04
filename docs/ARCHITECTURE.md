@@ -4,38 +4,46 @@ The Target Node runs highly available backend services structured in a strict Di
 
 ## 🌐 Ingress & Microservices Traffic Flow
 
-```text
-[🌍 Public Internet]
-         │ (HTTPS / 443)
-         ▼
-┌──────────────────────────┐
-│ ☁️ Cloudflare (DNS/Proxy)│
-└────────────┬─────────────┘
-             │ (Port Forwarding)
-             ▼
-┌──────────────────────────┐
-│ 🛡️ UXG-Fiber Gateway     │
-└────────────┬─────────────┘
-             │ (VLAN Routing)
-=============▼=========================================================
-[ 🏠 Homelab Subnet / Target Node ]
+## 🌐 Ingress & Microservices Traffic Flow
 
-┌──────────────────────────┐
-│ 🚦 Nginx Proxy Manager   │ (SSL Termination & Ingress Routing)
-└──────┬──────┬──────┬─────┘
-       │      │      │
-       ▼      │      ▼
-  ┌──────┐    │   ┌────────────┐
-  │ Apps │    │   │ Monitoring │ (Prometheus / Grafana)
-  └──────┘    │   └────────────┘
-      │       ▼          │
-      │   ┌───────┐      │
-      │   │ CI/CD │      │
-      │   │ Vault │      │
-      │   └───────┘      │
-      ▼                  ▼
-[ 🗄️ Isolated Database Network (PostgreSQL & Redis) ]
-=======================================================================
+```text
+                                   [ 🌍 Public Internet ]
+                                             │
+                                       (HTTPS / 443)
+                                             ▼
+                     ┌───────────────────────────────────────────────┐
+                     │           ☁️ Cloudflare (DNS/Proxy)           │
+                     └───────────────────────┬───────────────────────┘
+                                     (Port Forwarding)
+                                             ▼
+                     ┌───────────────────────────────────────────────┐
+                     │              🛡️ UXG-Fiber Gateway             │
+                     └───────────────────────┬───────────────────────┘
+                                      (VLAN Routing)
+                                             ▼
+=============================================================================================
+                              [ 🏠 Homelab Subnet / Target Node ]
+
+                     ┌───────────────────────────────────────────────┐
+                     │             🚦 Nginx Proxy Manager            │
+                     │           (SSL Termination/Routing)           │
+                     │         ┌─────────────┼─────────────┐         │
+                     │         │             │             │         │
+                     │         ▼             ▼             ▼         │
+                     │   ┌───────────┐ ┌───────────┐ ┌───────────┐   │
+                     │   │  📦 Apps  │ │  ⚙️ Core  │ │ 📈 Monitor│   │
+                     │   │ (4 Repos) │ │(Jenkins & │ │(Prometheus│   │
+                     │   │           │ │   Vault)  │ │ & Grafana)│   │
+                     │   └─────┬─────┘ └─────┬─────┘ └─────┬─────┘   │
+                     │         │             │             │         │
+                     │         ▼             ▼             ▼         │
+                     │         └─────────────┼─────────────┘         │
+                     │                       │                       │
+                     │                       ▼                       │
+                     │          🗄️ Isolated Database Network         │
+                     │             (PostgreSQL & Redis)              │
+                     └───────────────────────────────────────────────┘
+=============================================================================================
 ```
 
 ## 🛡️ Physical Networking & Network Segmentation
