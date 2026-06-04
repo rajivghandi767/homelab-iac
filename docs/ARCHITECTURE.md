@@ -56,17 +56,21 @@ To enforce a zero-trust security posture and isolate experimental environments f
 
 * **Personal & Work VLANs:** Dedicated networks for daily operations and remote work, ensuring compute stability and bandwidth prioritization.
 
+* **WireGuard VPN:** To ensure secure remote access when traveling or away from home, a WireGuard VPN is configured directly on the UXG-Fiber gateway. This tunnels remote devices into the secure management/homelab VLANs without exposing internal services to the broader public internet. This VPN is also used for safety/security, when connected to external wired or wireless networks (e.g. hotels, coffee shops, etc).
+
 ## 🏗️ Layered Orchestration (The Ansible DAG)
 
 The `deploy.yml` playbook orchestrates the stack in the following tiers:
 
 ### Tier 1: Network & Ingress
-Traffic is routed dynamically using **Cloudflare** proxies attached to a custom domain. 
-* **Nginx Proxy Manager:** Handles all SSL termination and reverse proxy routing to internal Docker networks.
-* **Pihole:** Resolves internal DNS and acts as a network-wide ad-blocker.
+* **Cloudflare:** Proxies all incoming public traffic and dynamically handles all **local DNS** resolution for the homelab.
+* **Nginx Proxy Manager:** Handles SSL termination and reverse proxy routing to internal Docker networks.
+* **Pihole:** Operates strictly as a network-wide ad-blocker (DNS resolution is deliberately offloaded to Cloudflare).
 
 ### Tier 2: State & Secrets
-* **HashiCorp Vault:** Acts as the central secret management engine. Following a deliberate architectural decision for homelab stability, this environment utilizes **static credentials** for GCP and Vault integrations. A Jenkins pipeline (`Unseal-Vault.Jenkinsfile`) automatically unseals the vault upon system reboots using injected API keys.
+Secret management is split across two domains to separate infrastructure provisioning from application runtime:
+* **GCP Secret Manager:** Dynamically handles the injection of secrets exclusively for **Terraform** infrastructure provisioning (e.g., GCS buckets, Cloudflare DNS records).
+* **HashiCorp Vault:** Dedicated exclusively to managing secrets for the production application deployments. For homelab stability, this vault integration utilizes **static credentials**. A Jenkins pipeline (`Unseal-Vault.Jenkinsfile`) is available to automatically unseal the vault using injected unseal keys. Production CI/CD pipelines utilize this Jenkinsfile to dynamically check if the vault is sealed or unsealed, and unseal it if necessary.
 
 ### Tier 3: Databases & Caching
 The data layer utilizes a dedicated `database` Docker network to isolate traffic from public ingress.

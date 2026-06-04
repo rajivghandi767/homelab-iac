@@ -1,6 +1,6 @@
 # Homelab Infrastructure as Code (IaC)
 
-An automated, highly available, and secure bare-metal homelab environment provisioned entirely via Infrastructure as Code (IaC). This repository serves as the central orchestration hub for managing production-grade personal applications and infrastructure, demonstrating real-world DevOps practices, robust disaster recovery, and declarative configuration management.
+Welcome to my infrastructure repository. This project is a fully automated, secure bare-metal homelab built from the ground up using Infrastructure as Code (IaC). It acts as the central hub for hosting my personal applications in a true production-grade environment. I built this to bridge the gap between development and operations, applying real-world DevOps practices, zero-data-loss disaster recovery, and declarative configuration management to my own workloads.
 
 ## 🎯 Project Intent & Impact
 
@@ -17,13 +17,13 @@ This project was built to transition a manual home networking setup into a resil
 
 This infrastructure serves as the live production host for my active full-stack development portfolio. Each application lives in its own dedicated repository and is dynamically provisioned into the environment via the Jenkins CI/CD pipeline:
 
-*   **Country Trivia Game:** A full-stack Django/React application featuring custom REST APIs and tiered grading algorithms. 
+*   **Country Trivia Game:** A full-stack Django/React application integrating Gemini AI to dynamically generate trivia questions and facts. It utilizes custom REST APIs and dedicated Jenkins pipelines for continuous data generation.
     *   [Play Live](https://trivia.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/country-trivia-web)
-*   **Prop & Ferry:** A travel search and logistics application utilizing custom web scrapers. 
+*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes isolated Jenkins pipelines for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread. 
     *   [Live Site](https://prop-ferry.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/prop-and-ferry)
-*   **Silicon Valley Trail:** A dynamic web game with automated CI/CD production deployments.
+*   **Silicon Valley Trail:** A state-driven web game powered by a custom Django event engine that orchestrates location tracking, weather systems, and player actions, consumed by a Vite/React frontend.
     *   [Play Live](https://svt.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/silicon-valley-trail)
-*   **Portfolio Website:** My professional portfolio, deployed as a containerized web app.
+*   **Portfolio Website:** A containerized Django/React application featuring a custom backend CMS for blog posts, project showcases, and automated contact routing.
     *   [Live Site](https://rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/portfolio-website)
 
 ## 💻 Environment Topology
@@ -55,7 +55,7 @@ The repository is organized by lifecycle boundaries to prevent state drift and s
 │   ├── 🍿 media/               # Jellyfin
 │   └── 📈 monitoring/          # Prometheus, Alertmanager, Watchtower
 ├── ☁️ terraform/               # Cloud provisioning (GCS, Cloudflare)
-└── 🛠️ vars/                    # Jenkins shared libraries
+└── 🛠️ vars/                    # Jenkins shared libraries (Groovy)
 ```
 
 ## 🚨 IN CASE OF EMERGENCY (ICE)
