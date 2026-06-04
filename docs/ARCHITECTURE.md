@@ -46,35 +46,37 @@ The Target Node runs highly available backend services structured in a strict Di
 
 The homelab's physical foundation is built on Ubiquiti UniFi infrastructure, featuring a UXG-Fiber gateway, a U7 Pro Wall access point, and a Switch Flex Mini 2.5G for high-throughput backhaul. 
 
-To enforce a zero-trust security posture and isolate experimental environments from daily operations, the network is strictly segmented via VLANs and managed firewall policies:
+To enforce a zero-trust security posture and isolate experimental environments from daily operations, the network is segmented via strict VLANs and managed firewall policies:
 
-* **Management/Default VLAN:** Strictly routes internet traffic and isolates the core Ubiquiti networking hardware. No personal or compute devices reside here.
+* **Management/Default VLAN:** Strictly routes internet traffic and isolates the core Ubiquiti networking hardware. No personal, guest, or compute workloads reside here.
 
-* **Homelab VLAN:** The dedicated subnet for the Raspberry Pi bare-metal server and containerized infrastructure. Ingress is tightly controlled, and it is strictly firewalled off from personal devices.
+* **Personal VLAN:** The primary residential network for trusted, resident-owned personal devices. Operating under an administrative posture, this VLAN has authorized cross-VLAN routing permissions to initiate traffic to all other subnets for management purposes.
 
-* **IoT & Guest VLANs:** Completely isolated subnets with no cross-talk allowed to the Homelab or Work networks, preventing vulnerable smart devices from acting as an attack vector.
+* **Work VLAN:** A dedicated subnet for professional/corporate devices. It is securely firewalled to ensure complete compute stability, bandwidth prioritization, and total isolation from other residential subnets.
 
-* **Personal & Work VLANs:** Dedicated networks for daily operations and remote work, ensuring compute stability and bandwidth prioritization.
+* **Homelab VLAN:** The isolated environment hosting the Raspberry Pi bare-metal server and containerized infrastructure. Ingress is tightly restricted via Nginx Proxy Manager, and it is strictly firewalled to prevent any unauthorized lateral movement or traffic origination to personal or work subnets.
 
-* **WireGuard VPN:** To ensure secure remote access when traveling or away from home, a WireGuard VPN is configured directly on the UXG-Fiber gateway. This tunnels remote devices into the secure management/homelab VLANs without exposing internal services to the broader public internet. This VPN is also used for safety/security, when connected to external wired or wireless networks (e.g. hotels, coffee shops, etc).
+* **IoT VLAN:** A completely isolated subnet reserved strictly for smart home and Internet of Things appliances. It is blocked from communicating with any other internal network, preventing vulnerable smart devices from acting as a lateral attack vector.
+
+* **Guest VLAN:** A sandboxed network strictly for temporary visitors and non-resident devices. It grants immediate internet access but enforces isolation rules that block cross-talk to all local subnets.
+
+* **WireGuard VPN:** To ensure secure remote access when traveling or working remotely, a WireGuard VPN is configured directly on the UXG-Fiber gateway. This securely tunnels remote devices into the trusted VLAN layers without exposing internal services to the broader public internet.
 
 ## 🏗️ Layered Orchestration (The Ansible DAG)
 
 The `deploy.yml` playbook orchestrates the stack in the following tiers:
 
 ### Tier 1: Network & Ingress
-* **Cloudflare:** Proxies all incoming public traffic and dynamically handles all **local DNS** resolution for the homelab.
 * **Nginx Proxy Manager:** Handles SSL termination and reverse proxy routing to internal Docker networks.
+
 * **Pihole:** Operates strictly as a network-wide ad-blocker (DNS resolution is deliberately offloaded to Cloudflare).
 
 ### Tier 2: State & Secrets
-Secret management is split across two domains to separate infrastructure provisioning from application runtime:
-* **GCP Secret Manager:** Dynamically handles the injection of secrets exclusively for **Terraform** infrastructure provisioning (e.g., GCS buckets, Cloudflare DNS records).
 * **HashiCorp Vault:** Dedicated exclusively to managing secrets for the production application deployments. For homelab stability, this vault integration utilizes **static credentials**. A Jenkins pipeline (`Unseal-Vault.Jenkinsfile`) is available to automatically unseal the vault using injected unseal keys. Production CI/CD pipelines utilize this Jenkinsfile to dynamically check if the vault is sealed or unsealed, and unseal it if necessary.
 
 ### Tier 3: Databases & Caching
 The data layer utilizes a dedicated `database` Docker network to isolate traffic from public ingress.
-* **PostgreSQL:** The core relational database. Automation scripts (`01-init-users.sh`) dynamically provision isolated catalogs and user roles for production applications (Portfolio, SVT, Trivia, Prop & Ferry). PostgreSQL environment variables are strictly managed using the `POSTGRES_SECRETS` naming convention to eliminate magic variables and ensure explicit secret injection.
+* **PostgreSQL:** The core relational database. Automation scripts (`01-init-users.sh`) dynamically provision isolated catalogs and user roles for production applications (Portfolio Website, Silicon Valley Trail, Country Trivia, Prop & Ferry). PostgreSQL environment variables are strictly managed using the `POSTGRES_SECRETS` naming convention to eliminate magic variables and ensure explicit secret injection.
 
 * **Redis:** High-speed caching layer for application state.
 

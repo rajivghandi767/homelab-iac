@@ -7,7 +7,7 @@ Welcome to my infrastructure repository. This project is a fully automated, secu
 This project was built to transition a manual home networking setup into a resilient, production-ready environment. Key achievements include:
 * **100% Declarative Infrastructure:** Eliminated configuration drift by managing 8+ containerized backend services, DNS records, and cloud storage buckets using **Ansible** and **Terraform**.
 
-* **Zero-Trust Disaster Recovery:** Engineered an automated, encrypted daily backup pipeline using `pigz`, GPG, and Google Cloud Storage (GCS) that allows for full bare-metal recovery with zero data loss.
+* **Zero-Trust Disaster Recovery:** Engineered an automated, encrypted weekly backup pipeline using `pigz`, GPG, and Google Cloud Storage (GCS) that allows for full bare-metal recovery with zero data loss.
 
 * **FinOps & Resource Efficiency:** Architected an enterprise-grade CI/CD and observability pipeline using 100% Free and Open Source Software (FOSS). The entire cloud footprint operates at near-zero cost (~$0.05 to $1.00/month for GCS encrypted backups, and ~$12/year for the custom domain).
 
@@ -19,10 +19,13 @@ This infrastructure serves as the live production host for my active full-stack 
 
 *   **Country Trivia Game:** A full-stack Django/React application integrating Gemini AI to dynamically generate trivia questions and facts. It utilizes custom REST APIs and dedicated Jenkins pipelines for continuous data generation.
     *   [Play Live](https://trivia.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/country-trivia-web)
-*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes isolated Jenkins pipelines for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread. 
+
+*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes isolated Jenkins pipelines for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread.
     *   [Live Site](https://prop-ferry.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/prop-and-ferry)
+
 *   **Silicon Valley Trail:** A state-driven web game powered by a custom Django event engine that orchestrates location tracking, weather systems, and player actions, consumed by a Vite/React frontend.
     *   [Play Live](https://svt.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/silicon-valley-trail)
+
 *   **Portfolio Website:** A containerized Django/React application featuring a custom backend CMS for blog posts, project showcases, and automated contact routing.
     *   [Live Site](https://rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/portfolio-website)
 

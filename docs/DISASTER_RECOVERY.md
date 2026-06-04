@@ -4,7 +4,7 @@ This infrastructure treats the Target Node as ephemeral. In the event of total h
 
 ## 💾 Automated Backup Pipeline
 
-A root-level cron job executes `backup_volumes.sh` daily. This pipeline ensures zero-data loss through the following mechanisms:
+A root-level cron job executes `backup_volumes.sh` weekly. This pipeline ensures zero-data loss through the following mechanisms:
 1. **Serialization:** Target containers are gracefully stopped while `pigz` streams a highly compressed archive of the Docker volume across multiple CPU cores.
 
 2. **Logical Dumps:** Executes a `pg_dumpall` on the central Postgres engine to capture all application schemas and data.

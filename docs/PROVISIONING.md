@@ -28,7 +28,7 @@ Terraform is responsible for configuring Cloudflare DNS records and provisioning
 
 ## 3. Configuration Management (Ansible)
 
-Ansible provisions the base OS packages on the Target Node, establishes the strict directory scaffolding, dynamically generates `.env` files from Jinja2 templates (e.g., `global_secrets.env.j2`), and boots the Docker network.
+Ansible provisions the base OS packages on the Target Node, establishes the strict directory scaffolding, dynamically generates `.env` and other configuration files from Jinja2 templates (e.g. 'vault_token.j2'), and boots the Docker network.
 
 1. **Populate Secrets:** Ensure `ansible/group_vars/all/secrets.yml` is populated and encrypted via `ansible-vault`. Ensure your vault password is saved locally at `~/.ansible_vault_pass`.
 
