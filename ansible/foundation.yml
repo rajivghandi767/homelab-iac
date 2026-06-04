@@ -6,6 +6,7 @@
     ansible_python_interpreter: /usr/bin/python3
     # --- GLOBAL CONSTANTS (Single Source of Truth) ---
     base_dir: "/opt/homelab-iac"
+    docker_data_root: "/mnt/dockerdata"
     sys_user: "dietpi"
     sys_group: "dietpi"
 
@@ -39,7 +40,7 @@
         dest: /etc/docker/daemon.json
         content: |
           {
-            "data-root": "/mnt/dockerdata",
+            "data-root": "{{ docker_data_root }}",
             "log-driver": "json-file",
             "log-opts": {
               "max-size": "10m",
@@ -47,6 +48,24 @@
             }
           }
       notify: Restart Docker
+
+    - name: Ensure containerd config directory exists
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        mode: '0755'
+
+    - name: Generate default containerd config if not present
+      ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+      args:
+        creates: /etc/containerd/config.toml
+
+    - name: Enforce containerd external storage root
+      ansible.builtin.lineinfile:
+        path: /etc/containerd/config.toml
+        regexp: '^root = '
+        line: 'root = "{{ docker_data_root }}/containerd"'
+      notify: Restart containerd
 
     # --- 1. SCAFFOLDING TASK (Hardened Permissions) ---
     - name: Ensure base homelab directory structure exists
@@ -153,4 +172,9 @@
     - name: Restart Docker
       service:
         name: docker
+        state: restarted
+
+    - name: Restart containerd
+      service:
+        name: containerd
         state: restarted
