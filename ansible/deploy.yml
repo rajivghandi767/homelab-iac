@@ -53,6 +53,7 @@
           command: tar -xzf postgres_logical.tar.gz
           args:
             chdir: "{{ base_dir }}/backups/downloads"
+            creates: "{{ base_dir }}/backups/downloads/postgres_logical.sql"
 
         - name: Wait for Postgres to accept connections
           command: docker exec postgres-core pg_isready -U {{ postgres_root_user }}
@@ -60,6 +61,7 @@
           until: pg_ready.rc == 0
           retries: 10
           delay: 5
+          changed_when: false 
 
         - name: Pipe SQL dump into running Postgres container
           shell: "cat {{ base_dir }}/backups/downloads/postgres_logical.sql | docker exec -i postgres-core psql -U {{ postgres_root_user }}"

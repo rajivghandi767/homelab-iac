@@ -19,7 +19,7 @@ log_event() {
     local LEVEL=$1
     local MESSAGE=$2
     local TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    echo "{\"timestamp\": \"$TIMESTAMP\", \"level\": \"$LEVEL\", \"service\": \"backup_job\", \"message\": \"$MESSAGE\"}" | tee -a /var/log/homelab_backup.log
+    echo "{\"timestamp\": \"$TIMESTAMP\", \"level\": \"$LEVEL\", \"service\": \"backup_job\", \"message\": \"$MESSAGE\"}"
 }
 
 # --- Pre-Flight Assertions ---
@@ -42,10 +42,14 @@ cleanup_and_alert() {
 
     if [ $EXIT_CODE -ne 0 ]; then
         log_event "ERROR" "Backup pipeline encountered a fatal error after ${DURATION_MINUTES}m ${DURATION_SECONDS}s."
+        
+        # Extract the last 5 lines of the log and safely escape quotes/newlines for the JSON payload
+        ERROR_SNIPPET=$(tail -n 5 "$BASE_DIR/backups/logs/homelab_backup.log" | awk '{gsub(/["\\]/,"\\\\&"); printf "%s\\n", $0}')
+
         curl -s -H "Content-Type: application/json" -X POST -d "{
           \"embeds\": [{
             \"title\": \"🚨 Backup Failed ($HOSTNAME)\",
-            \"description\": \"The backup script exited prematurely on an error block. Inspect /var/log/homelab_backup.log.\",
+            \"description\": \"The backup script exited prematurely. \\n\\n**Last Output:**\\n\`\`\`\\n${ERROR_SNIPPET}\`\`\`\",
             \"color\": 16711680
           }]
         }" "$BACKUP_DISCORD_WEBHOOK_URL" > /dev/null

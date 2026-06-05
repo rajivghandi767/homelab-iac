@@ -4,6 +4,7 @@
   become: yes
   vars:
     ansible_python_interpreter: /usr/bin/python3
+    
     # --- GLOBAL CONSTANTS (Single Source of Truth) ---
     base_dir: "/opt/homelab-iac"
     docker_data_root: "/mnt/dockerdata"
@@ -11,12 +12,7 @@
     sys_group: "dietpi"
 
   tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
-
-    - name: Install essential dependencies
+    - name: Update apt cache and install essential dependencies
       apt:
         pkg:
           - curl
@@ -24,6 +20,8 @@
           - python3-docker
           - pigz
         state: present
+        update_cache: yes
+        cache_valid_time: 3600
 
     - name: Ensure Docker networks exist safely
       community.docker.docker_network:
@@ -55,17 +53,19 @@
         state: directory
         mode: '0755'
 
-    - name: Generate default containerd config if not present
-      ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
-      args:
-        creates: /etc/containerd/config.toml
+    - name: Dynamically generate and patch containerd configuration
+      block:
+        - name: Generate version-matched default config
+          ansible.builtin.shell: containerd config default > /etc/containerd/config.toml
+          args:
+            creates: /etc/containerd/config.toml
 
-    - name: Enforce containerd external storage root
-      ansible.builtin.lineinfile:
-        path: /etc/containerd/config.toml
-        regexp: '^root = '
-        line: 'root = "{{ docker_data_root }}/containerd"'
-      notify: Restart containerd
+        - name: Enforce containerd external storage root
+          ansible.builtin.lineinfile:
+            path: /etc/containerd/config.toml
+            regexp: '^root = '
+            line: 'root = "{{ docker_data_root }}/containerd"'
+          notify: Restart containerd
 
     # --- 1. SCAFFOLDING TASK (Hardened Permissions) ---
     - name: Ensure base homelab directory structure exists
@@ -86,14 +86,15 @@
         - { path: '{{ base_dir }}/scripts', mode: '0700' }
         - { path: '{{ base_dir }}/backups', mode: '0700' }
         - { path: '{{ base_dir }}/backups/staging', mode: '0700' } 
-        - { path: '{{ base_dir }}/backups/downloads', mode: '0700' } 
+        - { path: '{{ base_dir }}/backups/downloads', mode: '0700' }
+        - { path: '{{ base_dir }}/backups/logs', mode: '0700' } 
 
     - name: Schedule automated volume backups
       cron:
         name: "Homelab Volume Backup"
         minute: "0"
         hour: "0"
-        job: "{{ base_dir }}/scripts/backup_volumes.sh >> /var/log/homelab_backup.log 2>&1"
+        job: "{{ base_dir }}/scripts/backup_volumes.sh >> {{ base_dir }}/backups/logs/homelab_backup.log 2>&1"
         user: root
 
     - name: Generate Global Scripts Environment File
@@ -104,11 +105,15 @@
         owner: root
       no_log: "{{ not (show_secrets | default(false) | bool) }}"
 
+    # --- 2. RSYNC SYNCHRONIZATION ---
     - name: Sync service configurations from Control Node
       ansible.posix.synchronize:
         src: ../services/
         dest: "{{ base_dir }}/services/"
         delete: yes
+        owner: no
+        group: no
+        perms: no
         rsync_opts:
           - "--exclude=data/"
           - "--exclude=config/"
@@ -117,8 +122,24 @@
           - "--exclude=*.example"
           - "--exclude=*.j2"
           - "--exclude=*.env"
+          - "--exclude=vault_token"
+          - "--exclude=init-mongo.js"
+          
+    - name: Sync scripts directory from Control Node
+      ansible.posix.synchronize:
+        src: ../scripts/
+        dest: "{{ base_dir }}/scripts/"
+        owner: no
+        group: no
+        perms: no
+        
+    - name: Ensure backup script is executable by root only
+      ansible.builtin.file:
+        path: "{{ base_dir }}/scripts/backup_volumes.sh"
+        mode: '0700'
+        owner: root
 
-    # --- 2. DYNAMIC .J2 TEMPLATING ---
+    # --- 3. DYNAMIC .J2 TEMPLATING ---
     - name: Find all .j2 templates in services directory locally
       delegate_to: localhost
       become: false
@@ -133,39 +154,24 @@
       ansible.builtin.template:
         src: "{{ item.path }}"
         dest: "{{ base_dir }}/services/{{ item.path | regex_replace('^.*/services/', '') | regex_replace('\\.j2$', '') }}"
-        mode: '0600'
+        # Dynamically grant 0644 to files that unprivileged containers must read, otherwise lock to 0600
+        mode: "{{ '0644' if 'vault_token' in item.path or 'init-mongo.js' in item.path else '0600' }}"
         owner: root
       loop: "{{ j2_templates.files }}"
       no_log: "{{ not (show_secrets | default(false) | bool) }}"
-    
-    - name: Ensure Prometheus can read the generated Vault token
-      ansible.builtin.file:
-        path: "{{ base_dir }}/services/monitoring/prometheus/vault_token"
-        mode: '0644'
-    
-    - name: Sync scripts directory from Control Node
-      ansible.posix.synchronize:
-        src: ../scripts/
-        dest: "{{ base_dir }}/scripts/"
-        
-    - name: Ensure backup script is executable by root only
-      ansible.builtin.file:
-        path: "{{ base_dir }}/scripts/backup_volumes.sh"
-        mode: '0700'
-        owner: root
       
     - name: Configure logrotate for homelab backup log
       copy:
         dest: /etc/logrotate.d/homelab_backup
         content: |
-          /var/log/homelab_backup.log {
+          {{ base_dir }}/backups/logs/homelab_backup.log {
               weekly
               rotate 2
               compress
               delaycompress
               missingok
               notifempty
-              create 0644 root root
+              create 0600 root root
           }
 
   handlers:

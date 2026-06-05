@@ -57,9 +57,11 @@
             gpg --batch --yes --passphrase "{{ backup_encryption_passphrase }}" \
             -o {{ local_staging_dir }}/{{ item.file }}.tar.gz \
             -d {{ local_staging_dir }}/{{ item.file }}.tar.gz.gpg
+          args:
+            creates: "{{ local_staging_dir }}/{{ item.file }}.tar.gz"
           loop: "{{ restore_map }}"
           no_log: "{{ not (show_secrets | default(false) | bool) }}"
-
+          
     - name: Ensure remote download directory exists securely
       file:
         path: "{{ remote_backup_dir }}"
