@@ -4,26 +4,44 @@ groups:
       # 1. Service Down (Critical)
       - alert: ServiceDown
         expr: up == 0
-        for: 1m
+        for: 2m
         labels:
           severity: critical
         annotations:
           summary: "Service {{ $labels.instance }} is DOWN"
-          description: "Service has been unreachable for > 1 minute."
+          description: "Service has been unreachable for > 2 minutes."
 
-      # 2. Container Restarted (Warning)
-      # Uses cAdvisor metrics to detect if a container started < 2 mins ago
-      - alert: ContainerRestarted
-        expr: time() - container_start_time_seconds{name!=""} < 120
-        for: 0m
+      # 2. Redis OOM Ceiling (Critical)
+      - alert: RedisMemoryCritical
+        expr: container_memory_usage_bytes{name="redis"} > 241172480
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis Cache Nearing OOM"
+          description: "Redis memory is > 230MB (capped at 256MB). LRU eviction is failing to keep up with caching spikes."
+
+      # 3. Pi Thermal Throttling (Warning)
+      - alert: PiThermalThrottling
+        expr: node_hwmon_temp_celsius > 75
+        for: 10m
         labels:
           severity: warning
         annotations:
-          summary: "Container {{ $labels.name }} just restarted"
-          description: "Container uptime is less than 2 minutes. Check logs for potential crash loops."
+          summary: "Raspberry Pi Overheating"
+          description: "Pi temperature has exceeded 75C. CPU throttling is imminent."
 
-      # 3. High Memory Usage (Warning)
-      # Alert if memory usage > 85%
+      # 4. Docker Data Partition Exhaustion (Critical)
+      - alert: DockerVolumeExhaustion
+        expr: node_filesystem_avail_bytes{mountpoint="/mnt/dockerdata"} / node_filesystem_size_bytes{mountpoint="/mnt/dockerdata"} < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Docker Data Partition < 10% Free"
+          description: "Jenkins workspaces or Postgres databases are filling up the partition."
+
+      # 5. Generic High Container Memory (Warning)
       - alert: HighMemoryUsage
         expr: container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes > 0.85
         for: 5m
@@ -31,4 +49,14 @@ groups:
           severity: warning
         annotations:
           summary: "High Memory: {{ $labels.name }}"
-          description: "Memory usage is above 85%."
+          description: "Memory usage is above 85% of container limit."
+
+      # 6. Host Memory Exhaustion (Warning)
+      - alert: HostMemoryExhaustion
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host Memory < 15% Free"
+          description: "The Raspberry Pi has less than 15% of its total 8GB RAM available. OOM risk is increasing."
