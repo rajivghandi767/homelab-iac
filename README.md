@@ -29,6 +29,15 @@ This infrastructure serves as the live production host for my active full-stack 
 *   **Portfolio Website:** A containerized Django/React application featuring a custom backend CMS for blog posts, project showcases, and automated contact routing.
     *   [Live Site](https://rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/portfolio-website)
 
+## 🏛️ Infrastructure Architecture & Resource Constraints
+
+This entire environment runs in production on a single bare-metal Raspberry Pi 4B (8GB RAM). To maintain high availability across multiple distinct applications (Django/React stacks) while operating under strict memory constraints, the homelab enforces a centralized caching and database architecture:
+
+- **Centralized Redis Store:** A single lightweight Redis container handles caching for all applications simultaneously, configured with an absolute memory ceiling of `256MB` to prevent out-of-memory (OOM) cascading failures.
+- **Centralized PostgreSQL Core:** Rather than spinning up individual database containers for each app, a single highly-optimized PostgreSQL instance serves all workloads. Distinct databases and user roles are dynamically provisioned via initialization scripts to securely isolate application data while minimizing container overhead.
+- **Eviction Policy (`allkeys-lru`):** Ensures that stale cache data is aggressively pruned, allowing all applications to dynamically share the Redis memory pool without requiring individual instances.
+- **Decoupled Architecture:** By offloading intensive ORM queries and third-party API results to memory, CPU utilization and disk I/O on the Raspberry Pi are kept to an absolute minimum during traffic spikes.
+
 ## 💻 Environment Topology
 
 This infrastructure strictly enforces a separation of concerns using a dual-node architecture model:
