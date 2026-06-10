@@ -76,9 +76,9 @@ The `deploy.yml` playbook orchestrates the stack in the following tiers:
 
 ### Tier 3: Databases & Caching
 The data layer utilizes a dedicated `database` Docker network to isolate traffic from public ingress.
-* **PostgreSQL:** The core relational database. Automation scripts (`01-init-users.sh`) dynamically provision isolated catalogs and user roles for production applications (Portfolio Website, Silicon Valley Trail, Country Trivia, Prop & Ferry). PostgreSQL environment variables are strictly managed using the `POSTGRES_SECRETS` naming convention to eliminate magic variables and ensure explicit secret injection.
+* **PostgreSQL:** The centralized relational database. Rather than spinning up individual database containers for each app, this single highly-optimized instance serves all workloads. Automation scripts (`01-init-users.sh`) dynamically provision isolated catalogs and user roles for production applications (Portfolio Website, Silicon Valley Trail, Country Trivia, Prop & Ferry). PostgreSQL environment variables are strictly managed using the `POSTGRES_SECRETS` naming convention to eliminate magic variables and ensure explicit secret injection.
 
-* **Redis:** High-speed caching layer for application state.
+* **Redis:** The centralized high-speed caching layer. A single lightweight container handles caching for all applications simultaneously, configured with an absolute memory ceiling of `256MB` and an `allkeys-lru` eviction policy to prevent OOM cascading failures.
 
 * **pgAdmin:** Web-based UI for manual database administration.
 
