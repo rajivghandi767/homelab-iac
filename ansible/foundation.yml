@@ -94,6 +94,7 @@
         name: "Homelab Volume Backup"
         minute: "0"
         hour: "0"
+        weekday: "1"
         job: "{{ base_dir }}/scripts/backup_volumes.sh >> {{ base_dir }}/backups/logs/homelab_backup.log 2>&1"
         user: root
 

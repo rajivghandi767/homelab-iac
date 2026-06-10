@@ -7,7 +7,7 @@ services:
       - "com.centurylinklabs.watchtower.scope=global"
     networks:
       - database
-    command: redis-server --save "" --appendonly no
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
     platform: linux/arm64
 
   redis_commander:
