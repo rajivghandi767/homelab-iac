@@ -20,6 +20,7 @@ receivers:
   discord_configs:
   - webhook_url: '{{ monitoring_discord_webhook_url }}'
     send_resolved: true
+{% raw %}
     title: '{{ if eq .Status "firing" }}⚠️ Warning{{ else }}✅ Resolved{{ end }}: {{ .GroupLabels.alertname }}'
     message: |
       {{ range .Alerts }}
@@ -27,6 +28,7 @@ receivers:
       **Status:** {{ .Status | toUpper }}
       **Description:** {{ .Annotations.description }}
       {{ end }}
+{% endraw %}
 
 # Critical Notifications (Service Down)
 - name: 'discord-critical'
@@ -34,6 +36,7 @@ receivers:
   - webhook_url: '{{ monitoring_discord_webhook_url }}'
     send_resolved: true
     # Use different colors/titles for immediate visual urgency
+{% raw %}
     title: '{{ if eq .Status "firing" }}🔥 CRITICAL FAILURE{{ else }}💚 SERVICE RESTORED{{ end }}'
     message: |
        {{ range .Alerts }}
@@ -41,3 +44,4 @@ receivers:
        **Downtime:** {{ .StartsAt | since }}
        **Description:** {{ .Annotations.description }}
        {{ end }}
+{% endraw %}
