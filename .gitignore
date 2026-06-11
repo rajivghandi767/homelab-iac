@@ -14,6 +14,7 @@ gcp-credentials.json
 **/.env
 !.env.j2
 !.env.example
+services/monitoring/alertmanager/config/alertmanager.yml
 
 # Ansible Control Node Safeguards (Mac)
 .vault_pass
