@@ -178,4 +178,22 @@ rm "$BACKUP_ROOT/postgres_logical.sql" "$BACKUP_ROOT/postgres_logical.tar.gz"
 upload_to_gcs "$BACKUP_ROOT/postgres_logical.tar.gz.gpg"
 if [ $? -ne 0 ]; then exit 1; fi
 
+# 3. NATIVE UNIFI BACKUPS
+log_event "INFO" "Backing up native UniFi .unf backup files."
+UNIFI_BACKUP_DIR="${BASE_DIR}/services/core/unifi-controller/config/data/backup/autobackup"
+
+if [ -d "$UNIFI_BACKUP_DIR" ]; then
+    tar -cf - -C "$UNIFI_BACKUP_DIR" . | pigz > "$BACKUP_ROOT/unifi_autobackups.tar.gz"
+    gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_KEY" \
+        -c -o "$BACKUP_ROOT/unifi_autobackups.tar.gz.gpg" "$BACKUP_ROOT/unifi_autobackups.tar.gz"
+    if [ $? -ne 0 ]; then exit 1; fi
+
+    rm "$BACKUP_ROOT/unifi_autobackups.tar.gz"
+
+    upload_to_gcs "$BACKUP_ROOT/unifi_autobackups.tar.gz.gpg"
+    if [ $? -ne 0 ]; then exit 1; fi
+else
+    log_event "WARN" "UniFi backup directory not found. Skipping."
+fi
+
 exit 0
