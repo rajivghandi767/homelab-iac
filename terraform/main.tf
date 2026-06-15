@@ -38,11 +38,6 @@ data "google_secret_manager_secret_version" "cf_token" {
   version = "latest"
 }
 
-data "google_secret_manager_secret_version" "public_ip" {
-  project = "homelab-iac-rajiv"
-  secret  = "homelab_public_ip"
-  version = "latest"
-}
 
 data "google_secret_manager_secret_version" "local_ip" {
   project = "homelab-iac-rajiv"
