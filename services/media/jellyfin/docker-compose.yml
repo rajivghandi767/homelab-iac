@@ -12,7 +12,7 @@ services:
     volumes:
       - jellyfin_config:/config
       - jellyfin_cache:/cache
-      - /mnt/media:/mnt/media:ro
+      - /mnt/media/jellyfin:/media:ro
     environment:
       - JELLYFIN_PublishedServerUrl=https://jellyfin.rajivwallace.com
     extra_hosts:

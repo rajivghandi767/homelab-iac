@@ -11,6 +11,11 @@
     sys_user: "dietpi"
     sys_group: "dietpi"
 
+    # --- SWAP CONSTANTS ---
+    new_swap_file: "/mnt/media/swapfile"
+    new_swap_size_mb: 4096
+    old_swap_file: "/var/swap"
+
   tasks:
     - name: Update apt cache and install essential dependencies
       apt:
@@ -174,6 +179,22 @@
               notifempty
               create 0600 root root
           }
+
+    # --- 4. SWAP AND LOG OPTIMIZATION ---
+    - name: Update DietPi configuration for swap size
+      lineinfile:
+        path: /boot/dietpi.txt
+        regexp: '^AUTO_SETUP_SWAPFILE_SIZE='
+        line: 'AUTO_SETUP_SWAPFILE_SIZE={{ new_swap_size_mb }}'
+
+    - name: Update DietPi configuration for swap location
+      lineinfile:
+        path: /boot/dietpi.txt
+        regexp: '^AUTO_SETUP_SWAPFILE_LOCATION='
+        line: 'AUTO_SETUP_SWAPFILE_LOCATION={{ new_swap_file }}'
+
+    - name: Apply DietPi native swap configuration
+      command: /boot/dietpi/func/dietpi-set_swapfile {{ new_swap_size_mb }} {{ new_swap_file }}
 
   handlers:
     - name: Restart Docker
