@@ -161,7 +161,7 @@
         src: "{{ item.path }}"
         dest: "{{ base_dir }}/services/{{ item.path | regex_replace('^.*/services/', '') | regex_replace('\\.j2$', '') }}"
         # Dynamically grant 0644 to files that unprivileged containers must read, otherwise lock to 0600
-        mode: "{{ '0644' if 'vault_token' in item.path or 'init-mongo.js' in item.path else '0600' }}"
+        mode: "{{ '0644' if 'vault_token' in item.path or 'init-mongo.js' in item.path or 'gcp-kms.json' in item.path or 'vault.hcl' in item.path else '0600' }}"
         owner: root
       loop: "{{ j2_templates.files }}"
       no_log: "{{ not (show_secrets | default(false) | bool) }}"
