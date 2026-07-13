@@ -12,6 +12,9 @@ This project was built to transition a manual home networking setup into a resil
 * **FinOps & Resource Efficiency:** Architected an enterprise-grade CI/CD and observability pipeline using 100% Free and Open Source Software (FOSS). The entire cloud footprint operates at near-zero cost (~$0.05 to $1.00/month for GCS encrypted backups, and ~$12/year for the custom domain).
 
 * **End-to-End Event Alerting:** Integrated comprehensive Discord webhooks across the entire operational lifecycle. Real-time notifications (Success/Failure) are dispatched for CI/CD builds, app deployments, base container updates, and automated remote backups.
+> [!NOTE]
+> **CI/CD Evolution:** The entire homelab infrastructure and hosted applications were recently migrated from a centralized Jenkins/JVM monolith to a decentralized **GitHub Actions** edge runner topology to drastically optimize compute overhead and security. 
+> The legacy Jenkins infrastructure has been preserved for historical context in the [`archive/jenkins-pipeline`](https://github.com/rajivghandi767/homelab-iac/tree/archive/jenkins-pipeline) branch.
 
 ## 🚀 Hosted Production Workloads
 
