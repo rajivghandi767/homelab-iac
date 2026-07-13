@@ -129,6 +129,10 @@ VOLUMES=(
     # Tier 4: Mission-Critical Automation & Secret Backends
     "jenkins:jenkins_data:jenkins"
     "vault:vault_data:vault_data"
+    "gha-runner-portfolio:gha-runner_runner-cache-portfolio:runner-cache-portfolio"
+    "gha-runner-trivia:gha-runner_runner-cache-trivia:runner-cache-trivia"
+    "gha-runner-prop-ferry:gha-runner_runner-cache-prop-ferry:runner-cache-prop-ferry"
+    "gha-runner-svt:gha-runner_runner-cache-svt:runner-cache-svt"
 )
 
 log_event "INFO" "Starting scheduled backup serialization routine."
