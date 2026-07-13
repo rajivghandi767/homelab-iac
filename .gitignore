@@ -57,7 +57,6 @@ services/*/config/*.key
 services/*/letsencrypt/
 
 # Explicitly named volume mounts (Deviations from standard 'data/' naming)
-services/jenkins/jenkins_home/
 services/vault/vault_data/
 services/vault/vault_logs/
 services/core/pihole/etc-pihole/
@@ -74,16 +73,14 @@ services/media/jellyfin/cache/
 services/core/unifi-controller/config/
 
 # ==============================================================================
-# TIER 5: APPLICATION REPOSITORIES (JENKINS PROVISIONED)
+# TIER 5: APPLICATION REPOSITORIES (GITHUB ACTIONS PROVISIONED)
 # ==============================================================================
-# Jenkins dynamically provisions project folders and deployment manifests 
+# GitHub Actions dynamically provisions project folders and deployment manifests 
 # from external application repositories. The IaC repo must ignore all of this
 # to prevent source-of-truth conflicts.
 services/apps/*
 !services/apps/.gitkeep
 
-# ==============================================================================
-# TIER 6: OS, IDEs & LANGUAGE COMPILERS
 # ==============================================================================
 # Operating System
 .DS_Store

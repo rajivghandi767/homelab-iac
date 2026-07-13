@@ -127,7 +127,6 @@ VOLUMES=(
     "pihole:pihole_dnsmasq:pihole_dnsmasq"
 
     # Tier 4: Mission-Critical Automation & Secret Backends
-    "jenkins:jenkins_data:jenkins"
     "vault:vault_data:vault_data"
     "gha-runner-portfolio:gha-runner_runner-cache-portfolio:runner-cache-portfolio"
     "gha-runner-trivia:gha-runner_runner-cache-trivia:runner-cache-trivia"

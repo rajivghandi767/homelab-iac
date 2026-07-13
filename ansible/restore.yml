@@ -13,7 +13,6 @@
     gcp_credentials_path: "../secrets/gcp-credentials.json"
     
     restore_map:
-      - { file: "jenkins", volume: "jenkins_data", type: "volume" }
       - { file: "vault_data", volume: "vault_data", type: "volume" }
       - { file: "npm_data", volume: "npm_data", type: "volume" }
       - { file: "npm_letsencrypt", volume: "npm_letsencrypt", type: "volume" }
