@@ -24,3 +24,10 @@ telemetry {
   prometheus_retention_time = "24h"
   disable_hostname = true
 }
+
+seal "gcpckms" {
+  project     = "homelab-iac-rajiv"
+  region      = "global"
+  key_ring    = "homelab-vault-keyring"
+  crypto_key  = "vault-master-key"
+}

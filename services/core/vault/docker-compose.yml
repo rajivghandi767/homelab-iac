@@ -11,6 +11,7 @@ services:
       - VAULT_ADDR=http://127.0.0.1:8200
       - SKIP_CHOWN=true
       - SKIP_SETCAP=true
+      - GOOGLE_APPLICATION_CREDENTIALS=/vault/config/gcp-kms.json
     command: server
     volumes:
       - ./config:/vault/config:ro
