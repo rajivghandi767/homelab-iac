@@ -40,7 +40,7 @@
         - pgadmin
 
     # --- TIER 3.5: Database Data Restoration ---
-    # This must execute while Postgres is running but before Jenkins/Apps connect
+    # This must execute while Postgres is running but before Apps connect
     - name: Tier 3.5 | Check for pending logical database restore
       stat:
         path: "{{ base_dir }}/backups/downloads/postgres_logical.tar.gz"

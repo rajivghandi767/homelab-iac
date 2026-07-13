@@ -81,7 +81,7 @@
         owner: "{{ item.owner | default('root') }}"
         group: "{{ item.group | default('root') }}"
       loop:
-        # 0755: Required for the unprivileged dietpi user (and Jenkins) to traverse down to the apps directory
+        # 0755: Required for the unprivileged dietpi user to traverse down to the apps directory
         - { path: '{{ base_dir }}' } 
         - { path: '{{ base_dir }}/services' } 
         - { path: '{{ base_dir }}/services/apps', owner: '{{ sys_user }}', group: '{{ sys_group }}' } 
