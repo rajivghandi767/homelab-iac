@@ -69,3 +69,16 @@ To ensure zero disruption to live applications, the migration utilizes a paralle
 ### Phase 4: Clean Up
 - [ ] Decommission Jenkins container and wipe associated volumes.
 - [ ] Update `ARCHITECTURE.md` to document the new runner topology.
+
+---
+
+## 5. Retrospective
+
+**Successes:**
+* **Zero-Downtime Cutover:** Successfully migrated the entire infrastructure by running GitHub Actions and Jenkins in parallel during the transition.
+* **GCP KMS Auto-Unseal:** Vault now boots automatically without human intervention, drastically improving our disaster recovery posture.
+* **Secret Isolation:** Abstracting secrets out of GitHub via the `hashicorp/vault-action` ensures strict least-privilege for CI/CD runners.
+
+**Challenges & Solutions:**
+* **The Ephemeral Token Crash Loop:** Initially, the `myoung34/github-runner` containers were configured to use standard 1-hour GitHub registration tokens. Because the containers gracefully deregistered upon shutdown, any container restart after the 1-hour token expiration resulted in a permanent crash loop (`404 Not Found` during registration).
+* **The Fix:** Rather than injecting a highly-privileged global Personal Access Token (PAT)—which would violate the Principle of Least Privilege—we re-architected the containers. We updated the runner template with `DISABLE_AUTOMATIC_DEREGISTRATION="true"` and mapped a dedicated, isolated persistent volume (`runner-cache-<project>`) to each runner. This allowed each runner to cache its long-lived `.credentials` registration session permanently, surviving all future reboots and seamlessly integrating into our existing automated GCS volume backup pipelines.
