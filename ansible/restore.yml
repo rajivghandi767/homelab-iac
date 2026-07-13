@@ -24,6 +24,10 @@
       - { file: "pgadmin_data", volume: "pgadmin_data", type: "volume" }
       - { file: "grafana_data", volume: "grafana_data", type: "volume" }
       - { file: "jellyfin_config", volume: "jellyfin_config", type: "volume" }
+      - { file: "runner-cache-portfolio", volume: "runner-cache-portfolio", type: "volume" }
+      - { file: "runner-cache-trivia", volume: "runner-cache-trivia", type: "volume" }
+      - { file: "runner-cache-prop-ferry", volume: "runner-cache-prop-ferry", type: "volume" }
+      - { file: "runner-cache-svt", volume: "runner-cache-svt", type: "volume" }
       - { file: "postgres_logical", volume: "none", type: "sql" }
 
   pre_tasks:

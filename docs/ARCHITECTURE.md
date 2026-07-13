@@ -84,7 +84,7 @@ The data layer utilizes a dedicated `database` Docker network to isolate traffic
 
 ### Tier 4: CI/CD & Observability Pipeline (100% FOSS)
 This tier forms the backbone of the operational lifecycle. It is built entirely on Free and Open Source Software (FOSS) to deliver enterprise-grade deployment and monitoring capabilities at zero licensing cost:
-* **Jenkins (Continuous Integration / Deployment):** The central CI/CD automation engine. Jenkins dynamically pulls from external application repositories, builds the Docker images, and deploys the containers into the isolated networks. It dispatches real-time success or failure alerts directly to Discord upon pipeline completion.
+* **GitHub Actions (Continuous Integration / Deployment):** The central CI/CD automation engine. Self-hosted edge runners are deployed natively into the isolated core network to orchestrate deployments and cron tasks dynamically. It dispatches real-time success or failure alerts directly to Discord upon pipeline completion.
 
 * **Prometheus & Grafana (Observability):** The metrics collection and visualization stack. Prometheus scrapes time-series metrics from the host (Node Exporter), containers (cAdvisor), and databases (Postgres Exporter), rendering them onto custom Grafana dashboards.
 

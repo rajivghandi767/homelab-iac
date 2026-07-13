@@ -67,9 +67,9 @@ Once the raw volumes are in place, boot the infrastructure:
 ```bash
 ansible-playbook -i inventory/hosts.ini deploy.yml
 ```
-During execution, the `deploy.yml` playbook will pause at the **Tier 3.5** block. It will explicitly wait for the newly booted Postgres container to accept connections, pipe the logical SQL dump back into the database, and only then proceed to boot the applications (Jenkins, Portainer, etc.) that rely on that data.
+During execution, the `deploy.yml` playbook will pause at the **Tier 3.5** block. It will explicitly wait for the newly booted Postgres container to accept connections, pipe the logical SQL dump back into the database, and only then proceed to boot the applications (GitHub Actions Runners, Portainer, etc.) that rely on that data.
 
 ### Phase 5: Post-Restore Actions
-1. **Unseal Vault:** Because Vault was restored from a backup, it will be sealed. Trigger the Jenkins pipeline (`Unseal-Vault.Jenkinsfile`), or manually unseal it using your keys.
+1. **Unseal Vault:** Because Vault has been modernized to use **GCP KMS Auto-Unseal**, it will automatically decrypt its master key and unseal itself upon container boot. No manual unseal or CI pipeline execution is required!
 
 2. **Verify Integrity:** Check Grafana dashboards and ensure all Cloudflare proxies are successfully routing traffic to the applications.
