@@ -15,12 +15,12 @@ This project was built to transition a manual home networking setup into a resil
 
 ## 🚀 Hosted Production Workloads
 
-This infrastructure serves as the live production host for my active full-stack development portfolio. Each application lives in its own dedicated repository and is dynamically provisioned into the environment via the Jenkins CI/CD pipeline:
+This infrastructure serves as the live production host for my active full-stack development portfolio. Each application lives in its own dedicated repository and is dynamically provisioned into the environment via the GitHub Actions CI/CD pipeline:
 
-*   **Country Trivia Game:** A full-stack Django/React application integrating Gemini AI to dynamically generate trivia questions and facts. It utilizes custom REST APIs and dedicated Jenkins pipelines for continuous data generation.
+*   **Country Trivia Game:** A full-stack Django/React application integrating Gemini AI to dynamically generate trivia questions and facts. It utilizes custom REST APIs and dedicated GitHub Actions pipelines for continuous data generation.
     *   [Play Live](https://trivia.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/country-trivia-web)
 
-*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes isolated Jenkins pipelines for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread.
+*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes isolated GitHub Actions pipelines for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread.
     *   [Live Site](https://prop-ferry.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/prop-and-ferry)
 
 *   **Silicon Valley Trail:** A state-driven web game powered by a custom Django event engine that orchestrates location tracking, weather systems, and player actions, consumed by a Vite/React frontend.
@@ -62,12 +62,11 @@ The repository is organized by lifecycle boundaries to prevent state drift and s
 ├── 📜 scripts/                 # Bash utilities (e.g., backup_volumes.sh)
 ├── 🐳 services/                # Docker Compose definitions (The Stack)
 │   ├── 📦 apps/                # External application workloads
-│   ├── ⚙️ core/                # Jenkins, Nginx, Pihole, Vault, UniFi
+│   ├── ⚙️ core/                # GitHub Actions, Nginx, Pihole, Vault, UniFi
 │   ├── 🗃️ database/            # Postgres, pgAdmin, Redis
 │   ├── 🍿 media/               # Jellyfin
 │   └── 📈 monitoring/          # Prometheus, Alertmanager, Watchtower
 ├── ☁️ terraform/               # Cloud provisioning (GCS, Cloudflare)
-└── 🛠️ vars/                    # Jenkins shared libraries (Groovy)
 ```
 
 ## 🚨 IN CASE OF EMERGENCY (ICE)
