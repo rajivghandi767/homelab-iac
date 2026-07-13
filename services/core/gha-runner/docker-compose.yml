@@ -1,119 +1,51 @@
-services:
-  runner-portfolio:
-    image: myoung34/github-runner:ubuntu-jammy
-    container_name: gha-runner-portfolio
-    restart: unless-stopped
-    environment:
-      - RUNNER_NAME=pi-portfolio
-      - EPHEMERAL=false
-      - DISABLE_AUTO_UPDATE=false
-      - REPO_URL=https://github.com/rajivghandi/portfolio-website
-      - RUNNER_TOKEN=${TOKEN_PORTFOLIO}
-      - RUNNER_WORKDIR=/tmp/runner/work
-      - LABELS=self-hosted,linux,ARM64,pi
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache:/tmp/runner
-
-  runner-trivia:
-    image: myoung34/github-runner:ubuntu-jammy
-    container_name: gha-runner-trivia
-    restart: unless-stopped
-    environment:
-      - RUNNER_NAME=pi-trivia
-      - EPHEMERAL=false
-      - DISABLE_AUTO_UPDATE=false
-      - REPO_URL=https://github.com/rajivghandi/country-trivia-web
-      - RUNNER_TOKEN=${TOKEN_TRIVIA}
-      - RUNNER_WORKDIR=/tmp/runner/work
-      - LABELS=self-hosted,linux,ARM64,pi
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache:/tmp/runner
-
-  runner-prop-ferry:
-    image: myoung34/github-runner:ubuntu-jammy
-    container_name: gha-runner-prop-ferry
-    restart: unless-stopped
-    environment:
-      - RUNNER_NAME=pi-prop-ferry
-      - EPHEMERAL=false
-      - DISABLE_AUTO_UPDATE=false
-      - REPO_URL=https://github.com/rajivghandi/prop-and-ferry
-      - RUNNER_TOKEN=${TOKEN_PROP_FERRY}
-      - RUNNER_WORKDIR=/tmp/runner/work
-      - LABELS=self-hosted,linux,ARM64,pi
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache:/tmp/runner
-
-    runner-svt:
-    image: myoung34/github-runner:ubuntu-jammy
-    container_name: gha-runner-svt
-    restart: unless-stopped
-    environment:
-      - RUNNER_NAME=pi-svt
-      - EPHEMERAL=false
-      - DISABLE_AUTO_UPDATE=false
-      - REPO_URL=https://github.com/rajivghandi/silicon-valley-trail
-      - RUNNER_TOKEN=${TOKEN_SVT}
-      - RUNNER_WORKDIR=/tmp/runner/work
-      - LABELS=self-hosted,linux,ARM64,pi
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache:/tmp/runner
-
-volumes:
-  runner-cache:
-
 x-runner-template: &runner-template
   image: myoung34/github-runner:ubuntu-jammy
   restart: unless-stopped
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     - runner-cache:/tmp/runner
-  environment:
-    - EPHEMERAL=false
-    - DISABLE_AUTO_UPDATE=false
-    - RUNNER_WORKDIR=/tmp/runner/work
-    - LABELS=self-hosted,linux,ARM64,pi
+  environment: &runner-env
+    EPHEMERAL: "false"
+    DISABLE_AUTO_UPDATE: "false"
+    RUNNER_WORKDIR: "/tmp/runner/work"
+    LABELS: "self-hosted,linux,ARM64,pi"
 
 services:
   runner-portfolio:
     <<: *runner-template
     container_name: gha-runner-portfolio
     environment:
-      <<: *runner-template.environment
-      - REPO_URL=https://github.com/rajivghandi/portfolio-website
-      - RUNNER_TOKEN=${TOKEN_PORTFOLIO}
-      - RUNNER_NAME=pi-portfolio
-      
+      <<: *runner-env
+      REPO_URL: "https://github.com/rajivghandi767/portfolio-website"
+      RUNNER_TOKEN: "${TOKEN_PORTFOLIO}"
+      RUNNER_NAME: "pi-portfolio"
+
   runner-trivia:
     <<: *runner-template
     container_name: gha-runner-trivia
     environment:
-      <<: *runner-template.environment
-      - REPO_URL=https://github.com/rajivghandi/country-trivia-web
-      - RUNNER_TOKEN=${TOKEN_TRIVIA}
-      - RUNNER_NAME=pi-trivia
+      <<: *runner-env
+      REPO_URL: "https://github.com/rajivghandi767/country-trivia-web"
+      RUNNER_TOKEN: "${TOKEN_TRIVIA}"
+      RUNNER_NAME: "pi-trivia"
 
   runner-prop-ferry:
     <<: *runner-template
     container_name: gha-runner-prop-ferry
     environment:
-      <<: *runner-template.environment
-      - REPO_URL=https://github.com/rajivghandi/prop-and-ferry
-      - RUNNER_TOKEN=${TOKEN_PROP_FERRY}
-      - RUNNER_NAME=pi-prop-ferry
-      
+      <<: *runner-env
+      REPO_URL: "https://github.com/rajivghandi767/prop-and-ferry"
+      RUNNER_TOKEN: "${TOKEN_PROP_FERRY}"
+      RUNNER_NAME: "pi-prop-ferry"
+
   runner-svt:
     <<: *runner-template
     container_name: gha-runner-svt
     environment:
-      <<: *runner-template.environment
-      - REPO_URL=https://github.com/rajivghandi/silicon-valley-trail
-      - RUNNER_TOKEN=${TOKEN_SVT}
-      - RUNNER_NAME=pi-svt
+      <<: *runner-env
+      REPO_URL: "https://github.com/rajivghandi767/silicon-valley-trail"
+      RUNNER_TOKEN: "${TOKEN_SVT}"
+      RUNNER_NAME: "pi-svt"
 
 volumes:
   runner-cache:
