@@ -72,7 +72,7 @@ The `deploy.yml` playbook orchestrates the stack in the following tiers:
 * **Pihole:** Operates strictly as a network-wide ad-blocker (DNS resolution is deliberately offloaded to Cloudflare).
 
 ### Tier 2: State & Secrets
-* **HashiCorp Vault:** Dedicated exclusively to managing secrets for the production application deployments. For homelab stability, this vault integration utilizes **static credentials**. A Jenkins pipeline (`Unseal-Vault.Jenkinsfile`) is available to automatically unseal the vault using injected unseal keys. Production CI/CD pipelines utilize this Jenkinsfile to dynamically check if the vault is sealed or unsealed, and unseal it if necessary.
+* **HashiCorp Vault:** Dedicated exclusively to managing secrets for the production application deployments. For homelab stability, this vault integration utilizes **static credentials**. Vault is configured with **GCP KMS Auto-Unseal**, allowing it to authenticate with Google Cloud via a strict IAM Service Account to automatically decrypt its Master Key and unseal itself on container initialization without any manual intervention.
 
 ### Tier 3: Databases & Caching
 The data layer utilizes a dedicated `database` Docker network to isolate traffic from public ingress.
