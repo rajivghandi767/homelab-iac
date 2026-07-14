@@ -59,13 +59,6 @@ scrape_configs:
     static_configs:
       - targets: ['postgres-exporter:9187']
 
-  # Jenkins
-  - job_name: 'jenkins'
-    static_configs:
-      - targets: ['jenkins:8080']
-    metrics_path: '/prometheus'
-    scrape_interval: 30s
-
   # HashiCorp Vault
   - job_name: 'vault'
     static_configs:

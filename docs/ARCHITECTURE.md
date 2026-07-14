@@ -30,8 +30,8 @@ The Target Node runs highly available backend services structured in a strict Di
                                ▼               ▼               ▼
                         ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
                         │    Apps     │ │    Core     │ │   Monitor   │
-                        │   4 Repos   │ │  Jenkins &  │ │ Prometheus  │
-                        │             │ │    Vault    │ │  & Grafana  │
+                        │   4 Repos   │ │ GHA Runners │ │ Prometheus  │
+                        │             │ │   & Vault   │ │  & Grafana  │
                         └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
                                │               │               │
                                ▼               ▼               ▼
@@ -88,7 +88,7 @@ This tier forms the backbone of the operational lifecycle. It is built entirely 
 
 * **Prometheus & Grafana (Observability):** The metrics collection and visualization stack. Prometheus scrapes time-series metrics from the host (Node Exporter), containers (cAdvisor), and databases (Postgres Exporter), rendering them onto custom Grafana dashboards.
 
-* **Alertmanager:** Integrated with Discord webhooks via Groovy scripts (`notifyDiscord.groovy`) to provide real-time alerts for critical pipeline failures or infrastructure warnings (e.g., High Memory, Service Down).
+* **Alertmanager:** Integrated with Discord webhooks natively to provide real-time alerts for critical infrastructure warnings (e.g., High Memory, Service Down).
 
 * **Watchtower:** Automates the lifecycle of base images, polling for upstream updates to containerized services and executing zero-downtime rolling restarts, immediately notifying Discord of the updated container digests.
 
