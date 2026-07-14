@@ -22,7 +22,6 @@ resource "cloudflare_record" "public_services" {
     "prop-ferry-api",  
     "svt", 
     "svt-api",
-    "jenkins", 
     "jellyfin"
   ])
   
