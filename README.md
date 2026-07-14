@@ -82,3 +82,14 @@ If the primary server has catastrophically failed or the Control Node is lost, p
 * **[Provisioning Guide](docs/PROVISIONING.md)** - Step-by-step instructions for installing dependencies, authenticating Terraform, and deploying a fresh environment.
 
 * **[Disaster Recovery & Restores](docs/DISASTER_RECOVERY.md)** - Emergency playbooks for restoring the environment, including the Total Loss Protocol.
+
+---
+
+## 📬 Let's Connect
+
+**Rajiv Wallace**  
+*Self-taught Software Engineer based in NYC (originally from Dominica 🇩🇲). Aviation nerd, Formula One fan, Chelsea FC supporter, and passionate about robust Backend Development and bare-metal DevOps.*
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/rajiv-wallace)
+[![Email](https://img.shields.io/badge/Email-EA4335?style=flat-square&logo=gmail&logoColor=white)](mailto:dev@rajivwallace.com)
+[![Portfolio](https://img.shields.io/badge/Portfolio-000000?style=flat-square&logo=dev.to&logoColor=white)](https://rajivwallace.com)
