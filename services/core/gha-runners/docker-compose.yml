@@ -2,7 +2,7 @@ x-runner-template: &runner-template
   image: myoung34/github-runner:ubuntu-jammy
   restart: unless-stopped
   environment: &runner-env
-    DISABLE_AUTO_UPDATE: "false"
+    DISABLE_AUTO_UPDATE: "true"
     RUNNER_WORKDIR: "/tmp/runner/work"
     LABELS: "self-hosted,linux,ARM64,pi"
     EPHEMERAL: "true"
