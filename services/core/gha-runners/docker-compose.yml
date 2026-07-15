@@ -1,6 +1,8 @@
 x-runner-template: &runner-template
   image: myoung34/github-runner:ubuntu-jammy
   restart: unless-stopped
+  labels:
+    - "com.centurylinklabs.watchtower.scope=global"
   environment: &runner-env
     DISABLE_AUTO_UPDATE: "true"
     RUNNER_WORKDIR: "/tmp/runner/work"
