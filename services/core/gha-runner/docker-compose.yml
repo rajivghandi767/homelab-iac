@@ -5,8 +5,7 @@ x-runner-template: &runner-template
     DISABLE_AUTO_UPDATE: "false"
     RUNNER_WORKDIR: "/tmp/runner/work"
     LABELS: "self-hosted,linux,ARM64,pi"
-    DISABLE_AUTOMATIC_DEREGISTRATION: "true"
-    CONFIGURED_ACTIONS_RUNNER_FILES_DIR: "/tmp/runner"
+    EPHEMERAL: "true"
 
 services:
   runner-portfolio:
@@ -14,11 +13,11 @@ services:
     container_name: gha-runner-portfolio
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache-portfolio:/tmp/runner
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/portfolio-website"
-      RUNNER_TOKEN: "${TOKEN_PORTFOLIO}"
+      APP_ID: "${APP_ID}"
+      APP_PRIVATE_KEY: "${APP_PRIVATE_KEY}"
       RUNNER_NAME: "pi-portfolio"
 
   runner-trivia:
@@ -26,11 +25,11 @@ services:
     container_name: gha-runner-trivia
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache-trivia:/tmp/runner
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/country-trivia-web"
-      RUNNER_TOKEN: "${TOKEN_TRIVIA}"
+      APP_ID: "${APP_ID}"
+      APP_PRIVATE_KEY: "${APP_PRIVATE_KEY}"
       RUNNER_NAME: "pi-trivia"
 
   runner-prop-ferry:
@@ -38,11 +37,11 @@ services:
     container_name: gha-runner-prop-ferry
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache-prop-ferry:/tmp/runner
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/prop-and-ferry"
-      RUNNER_TOKEN: "${TOKEN_PROP_FERRY}"
+      APP_ID: "${APP_ID}"
+      APP_PRIVATE_KEY: "${APP_PRIVATE_KEY}"
       RUNNER_NAME: "pi-prop-ferry"
 
   runner-svt:
@@ -50,15 +49,9 @@ services:
     container_name: gha-runner-svt
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - runner-cache-svt:/tmp/runner
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/silicon-valley-trail"
-      RUNNER_TOKEN: "${TOKEN_SVT}"
+      APP_ID: "${APP_ID}"
+      APP_PRIVATE_KEY: "${APP_PRIVATE_KEY}"
       RUNNER_NAME: "pi-svt"
-
-volumes:
-  runner-cache-portfolio:
-  runner-cache-trivia:
-  runner-cache-prop-ferry:
-  runner-cache-svt:
