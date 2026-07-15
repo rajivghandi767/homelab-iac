@@ -63,8 +63,8 @@ To ensure zero disruption to live applications, the migration utilizes a paralle
 ### Phase 3: Project Cutover
 - [x] **Silicon Valley Trail:** Map `Jenkinsfile` & `Jenkinsfile.deploy` ➡️ `.github/workflows/`.
 - [x] **Portfolio Website:** Map `Jenkinsfile` & `Jenkinsfile.deploy` ➡️ `.github/workflows/`.
-- [x] **Country Trivia Web:** Map Build, Deploy, and Data Generation crons.
-- [x] **Prop & Ferry:** Map Build, Deploy, and Scraping crons.
+- [x] **Country Trivia Web:** Map `Jenkinsfile`, `Jenkinsfile.deploy`, and `Jenkinsfile.data_generation` ➡️ `.github/workflows/`.
+- [x] **Prop & Ferry:** Map `Jenkinsfile`, `Jenkinsfile.deploy`, `Jenkinsfile.fetch_routes`, and `Jenkinsfile.scrape_ferries` ➡️ `.github/workflows/`.
 
 ### Phase 4: Clean Up
 - [x] Decommission Jenkins container and wipe associated volumes.
