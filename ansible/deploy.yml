@@ -82,7 +82,7 @@
         state: present
         wait: true
       loop:
-        - core/gha-runner
+        - core/gha-runners
         - core/portainer
         - monitoring
         - core/watchtower
