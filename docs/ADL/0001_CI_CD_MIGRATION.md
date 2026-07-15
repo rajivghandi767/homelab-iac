@@ -61,14 +61,15 @@ To ensure zero disruption to live applications, the migration utilizes a paralle
 - [ ] Inject `ROLE_ID`, `SECRET_ID`, and `PI_SSH_KEY` into GitHub Repository Secrets.
 
 ### Phase 3: Project Cutover
-- [ ] **Silicon Valley Trail:** Map `Jenkinsfile` & `Jenkinsfile.deploy` ➡️ `.github/workflows/`.
-- [ ] **Portfolio Website:** Map `Jenkinsfile` & `Jenkinsfile.deploy` ➡️ `.github/workflows/`.
-- [ ] **Country Trivia Web:** Map Build, Deploy, and Data Generation crons.
-- [ ] **Prop & Ferry:** Map Build, Deploy, and Scraping crons.
+- [x] **Silicon Valley Trail:** Map `Jenkinsfile` & `Jenkinsfile.deploy` ➡️ `.github/workflows/`.
+- [x] **Portfolio Website:** Map `Jenkinsfile` & `Jenkinsfile.deploy` ➡️ `.github/workflows/`.
+- [x] **Country Trivia Web:** Map Build, Deploy, and Data Generation crons.
+- [x] **Prop & Ferry:** Map Build, Deploy, and Scraping crons.
 
 ### Phase 4: Clean Up
-- [ ] Decommission Jenkins container and wipe associated volumes.
-- [ ] Update `ARCHITECTURE.md` to document the new runner topology.
+- [x] Decommission Jenkins container and wipe associated volumes.
+- [x] Update `ARCHITECTURE.md` to document the new runner topology.
+- [x] Transition runners from Stateful persistent volumes to Stateless GitHub App authentication.
 
 ---
 
@@ -80,6 +81,7 @@ To ensure zero disruption to live applications, the migration utilizes a paralle
 * **Secret Isolation:** Abstracting secrets out of GitHub via the `hashicorp/vault-action` ensures strict least-privilege for CI/CD runners.
 
 **Challenges & Solutions:**
-* **The Ephemeral Token Crash Loop:** Initially, the `myoung34/github-runner` containers were configured to use standard 1-hour GitHub registration tokens. Because the containers gracefully deregistered upon shutdown, any container restart after the 1-hour token expiration resulted in a permanent crash loop (`404 Not Found` during registration).
-* **The Fix:** Rather than injecting a highly-privileged global Personal Access Token (PAT)—which would violate the Principle of Least Privilege—we re-architected the containers. We updated the runner template with `DISABLE_AUTOMATIC_DEREGISTRATION="true"` and mapped a dedicated, isolated persistent volume (`runner-cache-<project>`) to each runner. This allowed each runner to cache its long-lived `.credentials` registration session permanently, surviving all future reboots and seamlessly integrating into our existing automated GCS volume backup pipelines.
-  * **Critical Bug Resolution:** During testing, the runner still suffered from automatic deregistration despite persistent volumes. This was root-caused to passing the string `EPHEMERAL: "false"` in `docker-compose.yml`, which evaluates to a truthy value, silently forcing ephemeral mode anyway. Completely removing the `EPHEMERAL` environment variable resolved the bug and permanently locked in the persistent state.
+* **The Statefulness Trap:** Initially, the self-hosted runners were configured with 1-hour registration tokens. To prevent crash loops upon restart, we erroneously introduced state by mounting persistent volumes (`runner-cache-<project>`) to cache their `.credentials` session permanently, bypassing the ephemeral token expiration.
+  * **The Problem:** This broke the fundamental cloud-native design of ephemeral runners. The cached runner instances were continually outdated, and the self-updates drastically spiked container startup times (from 3 seconds to 45 seconds). More critically, statefulness violated our goal of 100% declarative, stateless edge nodes.
+  * **The True Fix (Stateless GitHub App Auth):** We completely re-architected the containers to be fully stateless and explicitly ephemeral (`EPHEMERAL: "true"`). Instead of tokens, the runners now authenticate dynamically using a **GitHub App ID and Private Key**. This completely eliminated the need for persistent volumes.
+  * **Watchtower Synergy:** With runner self-updating intentionally disabled to eliminate boot latency (`DISABLE_AUTO_UPDATE: "true"`), we explicitly tagged the runners with the `com.centurylinklabs.watchtower.scope=global` label. Watchtower now seamlessly manages pulling and redeploying the newest runner images in the background, maintaining a perfect, stateless, auto-updating CI/CD pipeline.
