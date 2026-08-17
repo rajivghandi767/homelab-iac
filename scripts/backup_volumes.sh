@@ -45,21 +45,25 @@ cleanup_and_alert() {
         
         # Extract the last 5 lines of the log and safely escape quotes/newlines for the JSON payload
         ERROR_SNIPPET=$(tail -n 5 "$BASE_DIR/backups/logs/homelab_backup.log" | awk '{gsub(/["\\]/,"\\\\&"); printf "%s\\n", $0}')
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
         curl -s -H "Content-Type: application/json" -X POST -d "{
           \"embeds\": [{
             \"title\": \"🚨 Backup Failed ($HOSTNAME)\",
             \"description\": \"The backup script exited prematurely. \\n\\n**Last Output:**\\n\`\`\`\\n${ERROR_SNIPPET}\`\`\`\",
-            \"color\": 16711680
+            \"color\": 16711680,
+            \"timestamp\": \"$TIMESTAMP\"
           }]
         }" "$BACKUP_DISCORD_WEBHOOK_URL" > /dev/null
     else
         log_event "INFO" "Backup pipeline executed successfully in ${DURATION_MINUTES}m ${DURATION_SECONDS}s."
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         curl -s -H "Content-Type: application/json" -X POST -d "{
           \"embeds\": [{
             \"title\": \"✅ Backup Complete ($HOSTNAME)\",
             \"description\": \"All Docker volumes and databases successfully encrypted and synchronized in ${DURATION_MINUTES}m ${DURATION_SECONDS}s.\",
-            \"color\": 65280
+            \"color\": 65280,
+            \"timestamp\": \"$TIMESTAMP\"
           }]
         }" "$BACKUP_DISCORD_WEBHOOK_URL" > /dev/null
     fi

@@ -15,6 +15,7 @@ services:
     container_name: gha-runner-portfolio
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/portfolio-website"
@@ -27,6 +28,7 @@ services:
     container_name: gha-runner-trivia
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/country-trivia-web"
@@ -39,6 +41,7 @@ services:
     container_name: gha-runner-prop-ferry
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/prop-and-ferry"
@@ -51,6 +54,7 @@ services:
     container_name: gha-runner-svt
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
     environment:
       <<: *runner-env
       REPO_URL: "https://github.com/rajivghandi767/silicon-valley-trail"
