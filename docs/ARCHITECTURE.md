@@ -84,7 +84,7 @@ The data layer utilizes a dedicated `database` Docker network to isolate traffic
 
 ### Tier 4: CI/CD & Observability Pipeline (100% FOSS)
 This tier forms the backbone of the operational lifecycle. It is built entirely on Free and Open Source Software (FOSS) to deliver enterprise-grade deployment and monitoring capabilities at zero licensing cost:
-* **GitHub Actions (Continuous Integration / Deployment):** The central CI/CD automation engine. Self-hosted edge runners are deployed natively into the isolated core network to orchestrate deployments and cron tasks dynamically. It dispatches real-time success or failure alerts directly to Discord upon pipeline completion.
+* **GitHub Actions (Centralized Orchestrator & Edge Runners):** The central CI/CD automation engine. Rather than running uncoordinated cron schedules across separate repositories, a centralized **Master Orchestrator Workflow** (`deploy-orchestrator.yml`) runs on a single scheduled trigger (`06:15 UTC` / `2:15 AM EDT`) to sequentially dispatch and monitor deployment checks and data generation across all 4 application repositories. Self-hosted edge runners (`pi-portfolio`, `pi-svt`, `pi-prop-ferry`, `pi-trivia`) execute the jobs natively on the Raspberry Pi without queue congestion or concurrent image pull locks.
 
 * **Prometheus & Grafana (Observability):** The metrics collection and visualization stack. Prometheus scrapes time-series metrics from the host (Node Exporter), containers (cAdvisor), and databases (Postgres Exporter), rendering them onto custom Grafana dashboards.
 
@@ -93,3 +93,17 @@ This tier forms the backbone of the operational lifecycle. It is built entirely 
 * **Watchtower:** Automates the lifecycle of base images, polling for upstream updates to containerized services and executing zero-downtime rolling restarts, immediately notifying Discord of the updated container digests.
 
 * **UniFi Controller:** Manages VLANs, VPNs, and firewall rules across local UniFi networking gear.
+
+---
+
+## ⏰ Operational Lifecycle & Maintenance Timeline
+
+To guarantee high availability and prevent resource contention on the Raspberry Pi 4B (8GB RAM), the entire homelab maintenance and CI/CD lifecycle is strictly sequenced during off-peak night hours:
+
+| Time (EDT) | Time (UTC) | Layer / Service | Operational Task | Rationale |
+| :--- | :--- | :--- | :--- | :--- |
+| **12:00 AM** *(Mon)* | 04:00 UTC *(Mon)* | Target Node (Root Cron) | Encrypted Volume & DB Backup (`backup_volumes.sh`) | Runs before container updates so backup captures pristine daily state. |
+| **1:00 AM** *(Daily)* | 05:00 UTC *(Daily)* | Global Watchtower | Core Infrastructure & GHA Runner Image Updates | Refreshes and restarts runner containers *before* deployment checks fire. |
+| **1:30 AM** *(Daily)* | 05:30 UTC *(Daily)* | UniFi Watchtower | UniFi Controller Image Monitoring | Scans UniFi stack for new upstream releases. |
+| **2:15 AM** *(Daily)* | 06:15 UTC *(Daily)* | Central GHA Orchestrator (`homelab-iac`) | Sequential Application Deployments & Health Checks | Runs on fresh, idle runners. Sequentially dispatches Portfolio $\rightarrow$ SVT $\rightarrow$ Prop & Ferry $\rightarrow$ Country Trivia $\rightarrow$ AI Data Generation. |
+| **9:00 AM** *(Mon)* | 13:00 UTC *(Mon)* | Dependabot | Weekly npm dependency scan & grouped PR creation | Evaluated during morning business hours for active review. |

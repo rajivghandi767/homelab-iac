@@ -41,3 +41,13 @@ Ansible provisions the base OS packages on the Target Node, establishes the stri
 ```bash
    ansible-playbook -i inventory/hosts.ini deploy.yml
    ```
+
+## 4. CI/CD Orchestrator & Runner Authentication (GitHub Actions)
+
+The central deployment orchestrator workflow in `.github/workflows/deploy-orchestrator.yml` requires authentication to dispatch workflows across all application repositories:
+
+1. **GitHub App Installation:** Ensure your dedicated GitHub App is installed across all homelab repositories (`homelab-iac`, `portfolio-website`, `silicon-valley-trail`, `prop-and-ferry`, `country-trivia-web`) with `Actions: Read and write` and `Contents: Read` permissions.
+2. **Configure Repository Secrets:** Add the following repository secrets to `homelab-iac`:
+   * `GH_APP_ID`: The App ID from your GitHub App settings.
+   * `GH_APP_PRIVATE_KEY`: The `.pem` RSA private key generated for the App.
+3. **Runner Verification:** Verify on the Target Node that self-hosted runners (`pi-portfolio`, `pi-svt`, `pi-prop-ferry`, `pi-trivia`) report online in GitHub repository settings.
