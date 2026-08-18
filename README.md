@@ -13,7 +13,7 @@ This project was built to transition a manual home networking setup into a resil
 
 * **End-to-End Event Alerting:** Integrated comprehensive Discord webhooks across the entire operational lifecycle. Real-time notifications (Success/Failure) are dispatched for CI/CD builds, app deployments, base container updates, and automated remote backups.
 > [!NOTE]
-> **CI/CD Evolution:** The entire homelab infrastructure and hosted applications are managed via a decentralized **GitHub Actions** edge runner topology, having migrated from a legacy Jenkins/JVM monolith to drastically optimize compute overhead and security. 
+> **CI/CD Evolution:** The entire homelab infrastructure and hosted applications are managed via a centralized **GitHub Actions** deployment orchestrator and self-hosted edge runner topology, having migrated from a legacy Jenkins/JVM monolith to drastically optimize compute overhead, eliminate queue jitter, and prevent resource lock contention on the Raspberry Pi. 
 > The legacy Jenkins infrastructure has been preserved for historical context in the [`archive/jenkins-pipeline`](https://github.com/rajivghandi767/homelab-iac/tree/archive/jenkins-pipeline) branch.
 
 ## 🚀 Hosted Production Workloads
@@ -55,6 +55,7 @@ The repository is organized by lifecycle boundaries to prevent state drift and s
 
 ```text
 📦 homelab-iac/
+├── ⚙️ .github/workflows/       # Master deployment orchestrator workflow
 ├── 🗄️ ansible/                 # Core configuration management
 │   ├── 🔐 group_vars/          # Encrypted Vault variables and configs
 │   ├── 📋 inventory/           # Target Node definitions
