@@ -1,0 +1,92 @@
+name: Deployment Orchestrator
+
+on:
+  schedule:
+    # Runs at 06:15 UTC (2:15 AM EDT / 1:15 AM EST) Daily
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+    inputs:
+      TARGET_APP:
+        description: 'Target Application to Deploy (or "all")'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - portfolio-website
+          - silicon-valley-trail
+          - prop-and-ferry
+          - country-trivia-web
+
+jobs:
+  orchestrate-deployments:
+    name: Orchestrate Deployments
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Run Sequential Deployments
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET: ${{ github.event.inputs.TARGET_APP || 'all' }}
+        run: |
+          set -e
+
+          dispatch_and_wait() {
+            local repo="$1"
+            local workflow="$2"
+            echo "=================================================="
+            echo "🚀 Dispatching $workflow on $repo..."
+            echo "=================================================="
+            gh workflow run "$workflow" --repo "${{ github.repository_owner }}/$repo" --ref main
+            
+            # Allow GitHub event ingestion to register run
+            sleep 8
+            
+            RUN_ID=$(gh run list --repo "${{ github.repository_owner }}/$repo" --workflow "$workflow" --limit 1 --json databaseId --jq '.[0].databaseId')
+            if [ -n "$RUN_ID" ]; then
+              echo "⏳ Watching run #$RUN_ID for $repo ($workflow)..."
+              gh run watch "$RUN_ID" --repo "${{ github.repository_owner }}/$repo" --exit-status
+              echo "✅ Completed $workflow on $repo."
+            else
+              echo "⚠️ Could not retrieve run ID for $repo. Proceeding..."
+            fi
+          }
+
+          DAY_OF_WEEK=$(date +%u) # 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
+
+          # 1. Portfolio Website
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "portfolio-website" ]; then
+            dispatch_and_wait "portfolio-website" "deploy.yml"
+          fi
+
+          # 2. Silicon Valley Trail
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "silicon-valley-trail" ]; then
+            dispatch_and_wait "silicon-valley-trail" "deploy.yml"
+          fi
+
+          # 3. Prop & Ferry
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "prop-and-ferry" ]; then
+            dispatch_and_wait "prop-and-ferry" "deploy.yml"
+
+            # Bi-weekly coordinate and live ferry scrapers (Wed=3, Sun=7)
+            if [ "$DAY_OF_WEEK" -eq 3 ] || [ "$DAY_OF_WEEK" -eq 7 ]; then
+              echo "📅 Bi-weekly schedule matched (Wed/Sun): running fetch_routes and scrape_ferries..."
+              dispatch_and_wait "prop-and-ferry" "fetch_routes.yml"
+              dispatch_and_wait "prop-and-ferry" "scrape_ferries.yml"
+            fi
+          fi
+
+          # 4. Country Trivia Web
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "country-trivia-web" ]; then
+            dispatch_and_wait "country-trivia-web" "deploy.yml"
+            dispatch_and_wait "country-trivia-web" "data_generation.yml"
+          fi
+
+          echo "🎉 All deployment checks and scheduled pipelines executed successfully."
