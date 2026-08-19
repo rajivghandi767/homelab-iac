@@ -22,6 +22,9 @@ jobs:
   orchestrate-deployments:
     name: Orchestrate Deployments
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Generate GitHub App Token
         id: app-token
