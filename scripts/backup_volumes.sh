@@ -104,8 +104,8 @@ upload_to_gcs() {
         -v "$KEY_FILE":/tmp/key.json:ro \
         gcr.io/google.com/cloudsdktool/google-cloud-cli:alpine \
         sh -c "gcloud auth activate-service-account --key-file=/tmp/key.json && \
-               gsutil cp /backup/$FILENAME $GCS_BUCKET/$DATE/$FILENAME && \
-               gsutil cp /backup/$FILENAME $GCS_BUCKET/latest/$FILENAME"
+               gcloud storage cp /backup/$FILENAME $GCS_BUCKET/$DATE/$FILENAME && \
+               gcloud storage cp /backup/$FILENAME $GCS_BUCKET/latest/$FILENAME"
                
     local STATUS=$?
     shred -u "$KEY_FILE" 2>/dev/null || rm -f "$KEY_FILE"
