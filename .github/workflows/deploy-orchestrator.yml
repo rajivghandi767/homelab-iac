@@ -2,8 +2,8 @@ name: Deployment Orchestrator
 
 on:
   schedule:
-    # Runs at 06:15 UTC (2:15 AM EDT / 1:15 AM EST) Daily
-    - cron: '15 6 * * *'
+    # Runs at 07:30 UTC (3:30 AM EDT / 2:30 AM EST) Daily
+    - cron: '30 7 * * *'
   workflow_dispatch:
     inputs:
       TARGET_APP:
