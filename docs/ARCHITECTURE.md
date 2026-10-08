@@ -90,6 +90,8 @@ This tier forms the backbone of the operational lifecycle. It is built entirely 
 
 * **Alertmanager:** Integrated with Discord webhooks natively to provide real-time alerts for critical infrastructure warnings (e.g., High Memory, Service Down).
 
+* **UptimeRobot (Black-Box Monitoring):** An external monitoring service used to probe the public-facing endpoints (e.g., `rajivwallace.com`, `prop-ferry.rajivwallace.com`) every 5 minutes. This solves the inherent Single Point of Failure (SPoF) of hosting the monitoring stack on the same bare-metal node as the applications; if the Raspberry Pi loses power or internet connectivity, UptimeRobot provides the critical "Service Down" email and Discord alerts that an offline internal Alertmanager cannot send.
+
 * **Watchtower:** Automates the lifecycle of base images, polling for upstream updates to containerized services and executing zero-downtime rolling restarts, immediately notifying Discord of the updated container digests.
 
 * **UniFi Controller:** Manages VLANs, VPNs, and firewall rules across local UniFi networking gear.
