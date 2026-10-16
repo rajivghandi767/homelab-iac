@@ -4,10 +4,15 @@ This guide details the steps to deploy the infrastructure from scratch. It assum
 
 ## 1. Control Node Prerequisites
 
-Ensure the Control Node has the necessary IaC binaries installed:
+Ensure the Control Node has the necessary IaC binaries and runtime dependencies installed:
 ```bash
-# MacOS / Homebrew
+# 1. Install CLI tools (Note: Google Cloud CLI is distributed as a Homebrew Cask)
 brew install terraform ansible gnupg
+brew install --cask gcloud-cli
+
+# 2. Install required Ansible collections and Python dependencies
+ansible-galaxy collection install -r ansible/requirements.yml
+pip install requests google-auth
 ```
 
 ## 2. Infrastructure Deployment (Terraform)
