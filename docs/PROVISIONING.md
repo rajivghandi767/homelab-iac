@@ -51,3 +51,15 @@ The central deployment orchestrator workflow in `.github/workflows/deploy-orches
    * `GH_APP_ID`: The App ID from your GitHub App settings.
    * `GH_APP_PRIVATE_KEY`: The `.pem` RSA private key generated for the App.
 3. **Runner Verification:** Verify on the Target Node that self-hosted runners (`pi-portfolio`, `pi-svt`, `pi-prop-ferry`, `pi-trivia`) report online in GitHub repository settings.
+
+---
+
+## ⚖️ Provisioning Tradeoffs & Security Posture
+
+* **Push Architecture vs. Server-Side Git Clones:** The Target Node is deliberately "git-less". It contains no `.git` directories and holds no GitHub Personal Access Tokens or repository SSH deployment keys.
+  * *The "Why":* Ansible uses `rsync` over SSH to push rendered Jinja2 templates directly to the server. If the edge host is ever breached, an attacker cannot pivot to GitHub or inspect git commit logs for historical secrets.
+  * *The Tradeoff:* The Target Node cannot autonomously pull updates; all infrastructure provisioning must be pushed from an authenticated Control Node.
+* **Flash Storage Wear Mitigation:** By default, Linux on a Raspberry Pi maintains a swapfile on the boot MicroSD card.
+  * *The "Why":* `foundation.yml` overrides this behavior by relocating the 4GB swapfile to `/mnt/media/swapfile` (external USB 3.2 storage) and configuring Docker's `data-root` at `/mnt/dockerdata` with strict container log rotation (`max-size: 10m`, `max-file: 3`).
+  * *The Tradeoff:* Incurs wear cycles on replaceable external USB media to ensure the critical MicroSD boot OS is shielded from premature write exhaustion and root filesystem disk starvation.
+* **Principle of Least Privilege Configuration (`chmod 0600`):** All sensitive templated files (`.env`, `gcp-kms.json`) pushed by Ansible are explicitly locked down to `owner: root` and `mode: 0600`. Unprivileged container processes or compromised applications cannot inspect host-level secrets.
