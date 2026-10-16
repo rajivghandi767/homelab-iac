@@ -54,12 +54,8 @@ The central deployment orchestrator workflow in `.github/workflows/deploy-orches
 
 ---
 
-## ⚖️ Provisioning Tradeoffs & Security Posture
+## ⚖️ Provisioning Design & Security Posture
 
-* **Push Architecture vs. Server-Side Git Clones:** The Target Node is deliberately "git-less". It contains no `.git` directories and holds no GitHub Personal Access Tokens or repository SSH deployment keys.
-  * *The "Why":* Ansible uses `rsync` over SSH to push rendered Jinja2 templates directly to the server. If the edge host is ever breached, an attacker cannot pivot to GitHub or inspect git commit logs for historical secrets.
-  * *The Tradeoff:* The Target Node cannot autonomously pull updates; all infrastructure provisioning must be pushed from an authenticated Control Node.
-* **Flash Storage Wear Mitigation:** By default, Linux on a Raspberry Pi maintains a swapfile on the boot MicroSD card.
-  * *The "Why":* `foundation.yml` overrides this behavior by relocating the 4GB swapfile to `/mnt/media/swapfile` (external USB 3.2 storage) and configuring Docker's `data-root` at `/mnt/dockerdata` with strict container log rotation (`max-size: 10m`, `max-file: 3`).
-  * *The Tradeoff:* Incurs wear cycles on replaceable external USB media to ensure the critical MicroSD boot OS is shielded from premature write exhaustion and root filesystem disk starvation.
-* **Principle of Least Privilege Configuration (`chmod 0600`):** All sensitive templated files (`.env`, `gcp-kms.json`) pushed by Ansible are explicitly locked down to `owner: root` and `mode: 0600`. Unprivileged container processes or compromised applications cannot inspect host-level secrets.
+* **Git-less Push Architecture:** The Target Node does not have git access, repository clones, or stored GitHub tokens. Ansible renders Jinja2 templates locally on the Control Node and pushes configurations over SSH (`rsync`). While this means the server cannot pull updates autonomously, it eliminates credential exposure on the edge—even if the physical server is breached, there are no repository tokens or git commit logs to compromise.
+* **Flash Storage Wear Mitigation:** Running continuous server workloads on a MicroSD card risks premature flash failure from swap thrashing and log accumulation. The `foundation.yml` playbook moves the 4GB swapfile to external USB 3.2 storage (`/mnt/media/swapfile`), points Docker's `data-root` to `/mnt/dockerdata`, and enforces strict container log rotation (`10m`, 3 files). We deliberately accept wear on cheap, replaceable external storage to protect the core OS boot filesystem.
+* **Least-Privilege File Permissions (`0600`):** Sensitive files rendered by Ansible (`.env`, `gcp-kms.json`) are locked down to `owner: root` and `mode: 0600`, preventing unprivileged containers and processes from reading host secrets.

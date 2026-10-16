@@ -67,29 +67,24 @@ To enforce a zero-trust security posture and isolate experimental environments f
 The `deploy.yml` playbook orchestrates the stack in the following tiers:
 
 ### Tier 1: Network & Ingress
-* **Nginx Proxy Manager:** The single ingress gateway binding host ports 80/443. Handles SSL termination using auto-renewing Let's Encrypt certificates and reverse-proxy routes plain HTTP over isolated Docker bridge networks to backend containers, injecting `X-Forwarded-Proto: https`. 
-  * *Tradeoff Rationale:* Terminating TLS at the edge eliminates redundant cryptographic handshakes on internal Docker bridge networks, saving ARM CPU cycles while keeping external traffic 100% encrypted. External port 80 is strictly blocked at the UXG-Fiber router firewall.
+* **Nginx Proxy Manager:** The sole perimeter ingress gateway binding host ports 80 and 443. It handles SSL termination via Let's Encrypt and routes plain HTTP across isolated Docker bridge networks to backend containers (injecting `X-Forwarded-Proto: https`). Terminating encryption at the edge saves valuable ARM CPU cycles by avoiding redundant internal TLS handshakes, while the UXG-Fiber router strictly blocks external port 80 at the hardware firewall.
 
-* **Pihole:** Operates as a network-wide ad-blocker and DNS sinkhole.
-  * *Tradeoff Rationale:* Recursive DNS resolution is deliberately offloaded to Cloudflare (`1.1.1.1`) rather than running a full local recursive resolver (such as Unbound), minimizing continuous memory and CPU overhead on the Pi.
+* **Pihole:** Network-wide ad-blocker and DNS sinkhole. Upstream recursive resolution is offloaded to Cloudflare (`1.1.1.1`) rather than running a full local recursive resolver (such as Unbound), minimizing continuous memory and CPU overhead on the Pi.
 
 ### Tier 2: State & Secrets
 * **HashiCorp Vault:** Dedicated exclusively to managing secrets for the production application deployments. For homelab stability, this vault integration utilizes **static credentials**. Vault is configured with **GCP KMS Auto-Unseal**, allowing it to authenticate with Google Cloud via a strict IAM Service Account to automatically decrypt its Master Key and unseal itself on container initialization without any manual intervention.
 
 ### Tier 3: Databases & Caching
 The data layer utilizes a dedicated `database` Docker network to isolate traffic from public ingress.
-* **PostgreSQL:** The centralized relational database. Rather than spinning up individual database containers for each app, this single highly-optimized instance serves all workloads. Automation scripts (`01-init-users.sh`) dynamically provision isolated catalogs and user roles for production applications (Portfolio Website, Silicon Valley Trail, Country Trivia, Prop & Ferry). PostgreSQL environment variables are strictly managed using the `POSTGRES_SECRETS` naming convention to eliminate magic variables and ensure explicit secret injection.
-  * *Tradeoff Rationale:* A shared multi-tenant database saves ~600MB+ in memory footprint versus running separate database instances per application.
+* **PostgreSQL:** The centralized relational database. Rather than spinning up individual database containers for each app, this single highly-optimized instance serves all workloads. Automation scripts (`01-init-users.sh`) dynamically provision isolated catalogs and user roles for production applications (Portfolio Website, Silicon Valley Trail, Country Trivia, Prop & Ferry). Sharing a single optimized engine saves over 600MB of idle RAM versus running four separate database containers. PostgreSQL environment variables are strictly managed using the `POSTGRES_SECRETS` naming convention to eliminate magic variables and ensure explicit secret injection.
 
-* **Redis:** The centralized high-speed caching layer. A single lightweight container handles caching for all applications simultaneously, configured with an absolute memory ceiling of `256MB` and an `allkeys-lru` eviction policy.
-  * *Tradeoff Rationale:* Redis runs with persistence explicitly disabled (`--save ""` and `--appendonly no`), treating it as a purely ephemeral in-memory cache. This eliminates disk write thrashing on host flash storage and avoids memory-doubling hazards caused by kernel `fork()` during snapshotting. Applications adhere to the **Cache-Aside pattern**, treating PostgreSQL as the source of truth.
+* **Redis:** The centralized high-speed caching layer, configured with an absolute memory ceiling of `256MB` and an `allkeys-lru` eviction policy. Persistence is intentionally disabled (`--save ""` and `--appendonly no`), treating Redis as a purely ephemeral in-memory cache to eliminate flash storage write thrashing and prevent memory spikes from background snapshot forks. Applications adhere to the **Cache-Aside pattern**, keeping PostgreSQL as the authoritative source of truth.
 
 * **pgAdmin:** Web-based UI for manual database administration.
 
 ### Tier 4: CI/CD & Observability Pipeline (100% FOSS)
 This tier forms the backbone of the operational lifecycle. It is built entirely on Free and Open Source Software (FOSS) to deliver enterprise-grade deployment and monitoring capabilities at zero licensing cost:
-* **GitHub Actions (Centralized Orchestrator & Edge Runners):** The central CI/CD automation engine. Rather than running uncoordinated cron schedules across separate repositories, a centralized **Master Orchestrator Workflow** (`deploy-orchestrator.yml`) runs on a single scheduled trigger (`06:15 UTC` / `2:15 AM EDT`) to sequentially dispatch and monitor deployment checks and data generation across all 4 application repositories. Self-hosted edge runners (`pi-portfolio`, `pi-svt`, `pi-prop-ferry`, `pi-trivia`) execute the jobs natively on the Raspberry Pi without queue congestion or concurrent image pull locks.
-  * *Tradeoff Rationale:* Runners operate as **Sibling Containers** by mounting `/var/run/docker.sock` directly rather than running Docker-in-Docker (DinD). This avoids the heavy nested virtualization and storage driver overhead of DinD while enforcing isolation through ephemeral runner containers (`EPHEMERAL: "true"`) and least-privilege GitHub App authentication.
+* **GitHub Actions (Centralized Orchestrator & Edge Runners):** The central CI/CD automation engine. Rather than running uncoordinated cron schedules across separate repositories, a centralized **Master Orchestrator Workflow** (`deploy-orchestrator.yml`) runs on a single scheduled trigger (`06:15 UTC` / `2:15 AM EDT`) to sequentially dispatch and monitor deployment checks and data generation across all 4 application repositories. Self-hosted edge runners (`pi-portfolio`, `pi-svt`, `pi-prop-ferry`, `pi-trivia`) run natively as **sibling containers** by mounting `/var/run/docker.sock` directly rather than running Docker-in-Docker (DinD). This avoids heavy virtualization and storage driver overhead while enforcing isolation through ephemeral runner containers (`EPHEMERAL: "true"`) and least-privilege GitHub App authentication.
 
 * **Prometheus & Grafana (Observability):** The metrics collection and visualization stack. Prometheus scrapes time-series metrics from the host (Node Exporter), containers (cAdvisor), and databases (Postgres Exporter), rendering them onto custom Grafana dashboards.
 
@@ -105,7 +100,7 @@ This tier forms the backbone of the operational lifecycle. It is built entirely 
 
 ## ⚖️ Architectural Decisions & Tradeoffs Matrix
 
-| Decision Area | Prioritization (The "Why") | The Tradeoff (What was accepted) | Mitigation Strategy |
+| Design Area | Rationale | Tradeoff Accepted | Mitigation Strategy |
 | :--- | :--- | :--- | :--- |
 | **Multi-Tenant Postgres vs. Isolated DB Containers** | Maximizes host memory efficiency (~150MB RSS for 1 engine vs. 600MB+ for 4 distinct instances). | Shared failure domain and resource competition during queries. | Automated weekly logical dumps (`pg_dumpall`), connection pooling, and separate databases/users per app. |
 | **Volatile Redis Cache (`--save ""` / no AOF)** | Prevents flash drive wear and eliminates `fork()` memory doubling during background snapshots. | Cache contents are volatile and lost on restart. | Strict **Cache-Aside** design where PostgreSQL holds authoritative data and cache misses seamlessly repopulate. |

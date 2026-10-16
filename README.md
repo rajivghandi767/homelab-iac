@@ -43,17 +43,11 @@ This entire environment runs in production on a single bare-metal Raspberry Pi 4
 
 ### 📐 Capacity Planning & Sizing Philosophy
 
-The host node actively orchestrates **35 concurrent containers** (applications, data layers, edge runners, and observability) within a **4.2 GiB RAM footprint**, leaving **~3.5 GiB available** for the Linux kernel's buffer/cache and maintaining near-zero swap usage (<50 MiB). Rather than over-allocating resources, every container tier is sized with a strict tradeoff model:
+The host node actively orchestrates **35 concurrent containers** (applications, data layers, edge runners, and observability) within a **4.2 GiB RAM footprint**, leaving **~3.5 GiB available** for the Linux kernel's buffer/cache and maintaining near-zero swap usage (<50 MiB). Rather than over-allocating resources, the stack is tuned for stability and predictable headroom:
 
-* **Predictable Memory over Raw Thread Count:** Each Django backend is standardized on **2 Gunicorn workers with 2 threads (`gthread`)**, providing 4 concurrent execution threads per application (16 total across the 4 hosted apps).
-  * *The "Why":* Caps Python process memory overhead (~120–150MB RSS per container), preventing OOM-killer invocations and memory ballooning during traffic spikes on ARM hardware.
-  * *The Tradeoff:* Limits simultaneous in-flight requests per container to 4. However, with Redis cache-aside response times averaging **6–15ms**, Little's Law ($N = \text{RPS} \times T$) demonstrates these 16 threads sustain **250–350 RPS**, comfortably supporting **600–1,200 active concurrent users** (at typical 2–5s human think times) without scaling prematurely.
-* **Multi-Tenant Data Layer over Per-App Duplication:** A single optimized PostgreSQL engine and volatile Redis instance serve all applications with strict logical schema and role separation (`01-init-users.sh`).
-  * *The "Why":* Eliminates ~600MB+ of redundant database/cache process overhead.
-  * *The Tradeoff:* Introduces a shared database failure domain, mitigated by automated weekly backups and off-peak cron maintenance windows.
-* **Storage Tiering & Flash Endurance:** The host uses a dual-drive architecture: a MicroSD card for OS boot and a USB 3.2 solid-state drive for volatile container data.
-  * *The "Why":* Redirects high-churn I/O—including Docker `data-root` (`/mnt/dockerdata`), a 4GB swapfile (`/mnt/media/swapfile`), and strict container log rotation (`10m`, 3 files)—away from the MicroSD card.
-  * *The Tradeoff:* Accepts wear on replaceable external storage to guarantee zero write-exhaustion corruption on the root boot filesystem.
+* **Predictable Memory over Raw Thread Count:** Rather than configuring high worker counts that risk memory balloons on ARM hardware, each Django backend is standardized on **2 Gunicorn workers with 2 threads (`gthread`)** (~120–150MB RSS). While this intentionally caps un-cached in-flight concurrency to 4 requests per application, pairing it with Redis cache-aside keeps API latencies at **6–15ms**. By Little's Law ($N = \text{RPS} \times T$), the fleet's 16 combined threads comfortably sustain **250–350 RPS**—supporting **600–1,200 active concurrent users** at typical 2–5s human think times without premature horizontal scaling.
+* **Shared Data Multi-Tenancy:** A single PostgreSQL engine and volatile Redis instance serve all applications through isolated schemas, catalogs, and roles (`01-init-users.sh`). This eliminates over 600MB of idle memory compared to running separate database runtimes per app. We accept the shared failure domain because automated weekly backups and off-peak cron maintenance provide a resilient safety net.
+* **Storage Tiering & Flash Endurance:** The host uses a dual-drive architecture: a MicroSD card for the core OS boot and an external USB 3.2 drive for volatile container workloads. High-churn I/O—including Docker's `data-root` (`/mnt/dockerdata`), a 4GB swap safety net (`/mnt/media/swapfile`), and rotated container logs (`10m`, 3 files)—is routed away from the MicroSD card, absorbing wear on replaceable external storage to guarantee zero write-exhaustion corruption on the root filesystem.
 
 ## 💻 Environment Topology
 

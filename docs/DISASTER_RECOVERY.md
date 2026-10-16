@@ -17,19 +17,13 @@ A root-level cron job executes `backup_volumes.sh` weekly. This pipeline ensures
 
 ---
 
-## ⚖️ Recovery Architecture & Tradeoffs
+## ⚖️ Backup Architecture & Practical Tradeoffs
 
-The backup and recovery topology prioritizes security and cost-efficiency over zero-second RPO:
+The backup and recovery topology is designed around two core priorities: zero-trust credential hygiene and minimal cloud operating costs:
 
-* **Zero-Trust Control Node Push Model:** The restore playbook streams encrypted `.gpg` archives directly to the Control Node (Macbook) for local decryption before pushing unencrypted payloads to the Target Node over SSH. All temporary decrypted staging files are immediately shredded on the Control Node.
-  * *The "Why":* The Target Node **never** holds the master GPG backup decryption key or GCP IAM credentials. If the physical edge server is compromised or stolen, no cloud storage keys or backup secrets can be extracted.
-  * *The Tradeoff:* Data takes a two-hop path during disaster recovery (GCS $\rightarrow$ Control Node $\rightarrow$ Target Node) rather than pulling directly to the server, slightly increasing restore transfer time in exchange for absolute credential isolation.
-* **Weekly Cold Backups vs. Live Hot Standby:** Volume archives and logical PostgreSQL dumps (`pg_dumpall`) are generated weekly and stored on GCS Coldline.
-  * *The "Why":* Keeps operational cloud costs near-zero (~$0.05 to $1.00/month) and avoids continuous CPU/network overhead from live database replication or WAL streaming on the Raspberry Pi.
-  * *The Tradeoff:* Recovery Point Objective (RPO) is up to 7 days for persistent data. This is an intentional tradeoff: core application code is version-controlled in GitHub, and dynamic data pipelines (such as trivia questions and travel routes) are fully idempotent and automatically regenerate state post-restore.
-* **Multi-Core `pigz` Compression:** Volume archives are compressed using parallel gzip (`pigz`), utilizing all 4 ARM Cortex-A72 cores.
-  * *The "Why":* Slashes volume compression time from several minutes to under 30 seconds, drastically minimizing database container pause time.
-  * *The Tradeoff:* Triggers a brief 100% CPU spike, scheduled safely during the off-peak maintenance window (12:00 AM Monday) when user traffic is negligible.
+* **Zero-Trust Push Restore:** The restore playbook streams encrypted archives to the Control Node (Macbook) for local decryption before pushing unencrypted payloads to the Target Node over SSH. All temporary decrypted staging files are immediately shredded locally. While this introduces an extra network hop (GCS $\rightarrow$ Mac $\rightarrow$ Pi) compared to pulling directly on the server, it guarantees the edge node **never** holds the master GPG decryption key or GCP service account credentials. If the physical hardware is ever compromised or stolen, no cloud keys or backup secrets exist on the machine.
+* **Cold Storage vs. Hot Standby:** Backups use weekly compressed volume archives and logical dumps (`pg_dumpall`) uploaded to GCS Coldline. This keeps cloud hosting costs under $1.00/month and eliminates the continuous CPU, memory, and bandwidth overhead of streaming replication. While this accepts an RPO of up to 7 days for database data, our workloads are largely static portfolios or feed from idempotent data pipelines that automatically regenerate dynamic state.
+* **Parallel Multi-Core Compression:** Volume backups use `pigz` to compress data across all 4 ARM Cortex-A72 cores in parallel. This spikes CPU utilization briefly to 100%, but shrinks compression times from several minutes down to under 30 seconds, minimizing the window that database writes are locked. The job runs at 12:00 AM Monday when traffic is negligible.
 
 ---
 
