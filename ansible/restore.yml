@@ -36,6 +36,24 @@
         state: directory
         mode: '0700'
 
+    - name: Ensure local secrets directory exists on Control Node
+      delegate_to: localhost
+      become: no
+      file:
+        path: "../secrets"
+        state: directory
+        mode: '0700'
+
+    - name: Materialize GCP credentials from Vault if missing
+      delegate_to: localhost
+      become: no
+      copy:
+        content: "{{ gcs_sa_key_json }}"
+        dest: "{{ gcp_credentials_path }}"
+        mode: '0600'
+        force: no
+      no_log: "{{ not (show_secrets | default(false) | bool) }}"
+
   tasks:
     - name: Secure Retrieval and Decryption (Executed on Control Node)
       delegate_to: localhost

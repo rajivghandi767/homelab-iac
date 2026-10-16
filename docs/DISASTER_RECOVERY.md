@@ -34,24 +34,28 @@ The backup and recovery topology is designed around two core priorities: zero-tr
 ### Phase 1: Bootstrap the New Control Node
 You must first recreate the control environment.
 ```bash
-# Install required dependencies
-brew install terraform ansible gnupg google-cloud-sdk
+# 1. Install CLI tools (Note: Google Cloud CLI is distributed as a Homebrew Cask)
+brew install terraform ansible gnupg
+brew install --cask gcloud-cli
+
+# 2. Install required Ansible collections and Python dependencies
+ansible-galaxy collection install -r ansible/requirements.yml
+pip install requests google-auth
 ```
 
-### Phase 2: Recover Cloud Credentials & Ansible Vault Password
-Because the previous Control Node is gone, you must regenerate the static credentials required to pull from GCS and run Terraform, and you **must** supply your Ansible Vault password to decrypt your repository.
+### Phase 2: Secret Zero Recovery (Ansible Vault Password)
+Because this repository stores encrypted secrets directly in version control (`ansible/group_vars/all/secrets.yml`), disaster recovery does not require manually regenerating or re-downloading cloud credentials. Supplying your single Ansible Vault master password unlocks the entire fleet:
 
-1. **Recreate the Ansible Vault Password File:** Ansible looks for your master password at a specific local path (`~/.ansible_vault_pass`). Retrieve your password from your external password manager and inject it:
+1. **Recreate the Ansible Vault Password File:** Ansible looks for your master password at a specific local path (`~/.ansible_vault_pass`). Retrieve your master password from your external password manager and inject it:
 ```bash
    echo "YOUR_ACTUAL_OLD_ANSIBLE_VAULT_PASSWORD" > ~/.ansible_vault_pass
    chmod 600 ~/.ansible_vault_pass
    ```
-2. **Recover GCP Key:** Log into the Google Cloud Console, navigate to IAM & Admin -> Service Accounts, and generate a new JSON key for your backup service account.
 
-3. **Export the variable:**
-```bash
-   export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your/new/gcp-credentials.json"
-   ```
+2. **Automated Credential Materialization:** When you execute the restore playbook in Phase 3, Ansible automatically decrypts `secrets.yml`, extracts your Google Cloud Service Account credentials (`gcs_sa_key_json`), and materializes `secrets/gcp-credentials.json` on the Control Node with `0600` permissions. No manual GCP key downloads or environment variable exports are required.
+
+> [!NOTE]
+> **Emergency GCP Key Fallback:** If you ever need to manually rotate or override the backup service account key, download a new JSON key from the Google Cloud Console (IAM & Admin $\rightarrow$ Service Accounts), save it directly to `secrets/gcp-credentials.json` (`chmod 600`), and update `gcs_sa_key_json` in `secrets.yml`.
 
 ### Phase 3: Execute the Zero-Trust Restore Playbook
 The restore process is governed by a **Zero-Trust Strategy**. To protect the Target Node from handling decryption keys directly, all decryption occurs locally on your new Control Node before data is securely pushed to the server over SSH.
