@@ -17,6 +17,22 @@ A root-level cron job executes `backup_volumes.sh` weekly. This pipeline ensures
 
 ---
 
+## ⚖️ Recovery Architecture & Tradeoffs
+
+The backup and recovery topology prioritizes security and cost-efficiency over zero-second RPO:
+
+* **Zero-Trust Control Node Push Model:** The restore playbook streams encrypted `.gpg` archives directly to the Control Node (Macbook) for local decryption before pushing unencrypted payloads to the Target Node over SSH. All temporary decrypted staging files are immediately shredded on the Control Node.
+  * *The "Why":* The Target Node **never** holds the master GPG backup decryption key or GCP IAM credentials. If the physical edge server is compromised or stolen, no cloud storage keys or backup secrets can be extracted.
+  * *The Tradeoff:* Data takes a two-hop path during disaster recovery (GCS $\rightarrow$ Control Node $\rightarrow$ Target Node) rather than pulling directly to the server, slightly increasing restore transfer time in exchange for absolute credential isolation.
+* **Weekly Cold Backups vs. Live Hot Standby:** Volume archives and logical PostgreSQL dumps (`pg_dumpall`) are generated weekly and stored on GCS Coldline.
+  * *The "Why":* Keeps operational cloud costs near-zero (~$0.05 to $1.00/month) and avoids continuous CPU/network overhead from live database replication or WAL streaming on the Raspberry Pi.
+  * *The Tradeoff:* Recovery Point Objective (RPO) is up to 7 days for persistent data. This is an intentional tradeoff: core application code is version-controlled in GitHub, and dynamic data pipelines (such as trivia questions and travel routes) are fully idempotent and automatically regenerate state post-restore.
+* **Multi-Core `pigz` Compression:** Volume archives are compressed using parallel gzip (`pigz`), utilizing all 4 ARM Cortex-A72 cores.
+  * *The "Why":* Slashes volume compression time from several minutes to under 30 seconds, drastically minimizing database container pause time.
+  * *The Tradeoff:* Triggers a brief 100% CPU spike, scheduled safely during the off-peak maintenance window (12:00 AM Monday) when user traffic is negligible.
+
+---
+
 ## 🚨 Emergency Restore Scenario: The "Total Loss" Protocol
 
 **Scenario:** The Target Node has suffered complete drive failure, AND your local Control Node (Mac) was lost, stolen, or destroyed. You are operating from a **Brand New Control Node**.

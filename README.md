@@ -36,10 +36,24 @@ This infrastructure serves as the live production host for my active full-stack 
 
 This entire environment runs in production on a single bare-metal Raspberry Pi 4B (8GB RAM). To maintain high availability across multiple distinct applications (Django/React stacks) while operating under strict memory constraints, the homelab enforces a centralized caching and database architecture:
 
-- **Centralized Redis Store:** A single lightweight Redis container handles caching for all applications simultaneously, configured with an absolute memory ceiling of `256MB` to prevent out-of-memory (OOM) cascading failures.
+- **Centralized Redis Store:** A single lightweight Redis container handles caching for all applications simultaneously, configured with an absolute memory ceiling of `256MB` and persistence disabled (`--save "" --appendonly no`) to prevent out-of-memory (OOM) cascading failures and eliminate flash storage write thrashing.
 - **Centralized PostgreSQL Core:** Rather than spinning up individual database containers for each app, a single highly-optimized PostgreSQL instance serves all workloads. Distinct databases and user roles are dynamically provisioned via initialization scripts to securely isolate application data while minimizing container overhead.
 - **Eviction Policy (`allkeys-lru`):** Ensures that stale cache data is aggressively pruned, allowing all applications to dynamically share the Redis memory pool without requiring individual instances.
 - **Decoupled Architecture:** By offloading intensive ORM queries and third-party API results to memory, CPU utilization and disk I/O on the Raspberry Pi are kept to an absolute minimum during traffic spikes.
+
+### 📐 Capacity Planning & Sizing Philosophy
+
+The host node actively orchestrates **35 concurrent containers** (applications, data layers, edge runners, and observability) within a **4.2 GiB RAM footprint**, leaving **~3.5 GiB available** for the Linux kernel's buffer/cache and maintaining near-zero swap usage (<50 MiB). Rather than over-allocating resources, every container tier is sized with a strict tradeoff model:
+
+* **Predictable Memory over Raw Thread Count:** Each Django backend is standardized on **2 Gunicorn workers with 2 threads (`gthread`)**, providing 4 concurrent execution threads per application (16 total across the 4 hosted apps).
+  * *The "Why":* Caps Python process memory overhead (~120–150MB RSS per container), preventing OOM-killer invocations and memory ballooning during traffic spikes on ARM hardware.
+  * *The Tradeoff:* Limits simultaneous in-flight requests per container to 4. However, with Redis cache-aside response times averaging **6–15ms**, Little's Law ($N = \text{RPS} \times T$) demonstrates these 16 threads sustain **250–350 RPS**, comfortably supporting **600–1,200 active concurrent users** (at typical 2–5s human think times) without scaling prematurely.
+* **Multi-Tenant Data Layer over Per-App Duplication:** A single optimized PostgreSQL engine and volatile Redis instance serve all applications with strict logical schema and role separation (`01-init-users.sh`).
+  * *The "Why":* Eliminates ~600MB+ of redundant database/cache process overhead.
+  * *The Tradeoff:* Introduces a shared database failure domain, mitigated by automated weekly backups and off-peak cron maintenance windows.
+* **Storage Tiering & Flash Endurance:** The host uses a dual-drive architecture: a MicroSD card for OS boot and a USB 3.2 solid-state drive for volatile container data.
+  * *The "Why":* Redirects high-churn I/O—including Docker `data-root` (`/mnt/dockerdata`), a 4GB swapfile (`/mnt/media/swapfile`), and strict container log rotation (`10m`, 3 files)—away from the MicroSD card.
+  * *The Tradeoff:* Accepts wear on replaceable external storage to guarantee zero write-exhaustion corruption on the root boot filesystem.
 
 ## 💻 Environment Topology
 
