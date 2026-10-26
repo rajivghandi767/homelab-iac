@@ -1,0 +1,10 @@
+[project]
+name = "homelab-iac"
+version = "0.1.0"
+description = "Homelab Infrastructure as Code (Ansible Control Node Environment)"
+requires-python = ">=3.14"
+dependencies = [
+    "ansible-core",
+    "google-auth",
+    "requests",
+]

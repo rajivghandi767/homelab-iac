@@ -39,8 +39,8 @@ brew install terraform ansible gnupg
 brew install --cask gcloud-cli
 
 # 2. Install required Ansible collections and Python dependencies
+uv sync
 ansible-galaxy collection install -r ansible/requirements.yml
-pip install requests google-auth
 ```
 
 ### Phase 2: Secret Zero Recovery (Ansible Vault Password)
