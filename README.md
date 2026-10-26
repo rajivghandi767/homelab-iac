@@ -79,6 +79,8 @@ The repository is organized by lifecycle boundaries to prevent state drift and s
 │   ├── 🍿 media/               # Jellyfin
 │   └── 📈 monitoring/          # Prometheus, Alertmanager, Watchtower
 ├── ☁️ terraform/               # Cloud provisioning (GCS, Cloudflare)
+├── 📦 pyproject.toml           # Control Node Python dependencies (Ansible, GCP Auth)
+└── 🔒 uv.lock                  # Deterministic uv lockfile
 ```
 
 ## 🚨 IN CASE OF EMERGENCY (ICE)
