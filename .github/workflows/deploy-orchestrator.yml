@@ -44,21 +44,47 @@ jobs:
           dispatch_and_wait() {
             local repo="$1"
             local workflow="$2"
+            local max_retries=4
+            local delay=5
+            local attempt=1
+
             echo "=================================================="
             echo "🚀 Dispatching $workflow on $repo..."
             echo "=================================================="
-            gh workflow run "$workflow" --repo "${{ github.repository_owner }}/$repo" --ref main
-            
-            # Allow GitHub event ingestion to register run
-            sleep 8
-            
-            RUN_ID=$(gh run list --repo "${{ github.repository_owner }}/$repo" --workflow "$workflow" --limit 1 --json databaseId --jq '.[0].databaseId')
+
+            DISPATCH_TIME=$(date -u -d "-10 seconds" +"%Y-%m-%dT%H:%M:%SZ")
+
+            while true; do
+              if gh workflow run "$workflow" --repo "${{ github.repository_owner }}/$repo" --ref main; then
+                break
+              fi
+              if [ "$attempt" -ge "$max_retries" ]; then
+                echo "❌ Failed to dispatch $workflow on $repo after $max_retries attempts."
+                return 1
+              fi
+              echo "⚠️ Dispatch failed (attempt $attempt/$max_retries). Retrying in ${delay}s..."
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+
+            # Poll for the newly registered run (created at or after DISPATCH_TIME)
+            RUN_ID=""
+            for i in {1..6}; do
+              sleep 5
+              RUN_ID=$(gh run list --repo "${{ github.repository_owner }}/$repo" --workflow "$workflow" --limit 5 --json databaseId,createdAt --jq "[.[] | select(.createdAt >= \"$DISPATCH_TIME\")][0].databaseId // empty" || true)
+              if [ -n "$RUN_ID" ]; then
+                break
+              fi
+              echo "⏳ Waiting for GitHub event ingestion on $repo (check $i/6)..."
+            done
+
             if [ -n "$RUN_ID" ]; then
               echo "⏳ Watching run #$RUN_ID for $repo ($workflow)..."
               gh run watch "$RUN_ID" --repo "${{ github.repository_owner }}/$repo" --exit-status
               echo "✅ Completed $workflow on $repo."
             else
-              echo "⚠️ Could not retrieve run ID for $repo. Proceeding..."
+              echo "⚠️ Could not retrieve run ID for $repo after polling. Proceeding..."
             fi
           }
 
