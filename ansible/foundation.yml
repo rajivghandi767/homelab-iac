@@ -109,14 +109,6 @@
         job: "{{ base_dir }}/scripts/backup_volumes.sh >> {{ base_dir }}/backups/logs/homelab_backup.log 2>&1"
         user: root
 
-    - name: Schedule nightly data generation and route scraping dispatch
-      cron:
-        name: "Homelab Nightly Data Jobs Dispatch"
-        minute: "30"
-        hour: "2"
-        job: "{{ base_dir }}/scripts/dispatch_data_jobs.sh >> {{ base_dir }}/backups/logs/homelab_data_dispatch.log 2>&1"
-        user: root
-
     - name: Generate Global Scripts Environment File
       template:
         src: templates/global_secrets.env.j2
@@ -153,14 +145,11 @@
         group: no
         perms: no
         
-    - name: Ensure host scripts are executable by root only
-      ansible.builtin.file:
-        path: "{{ item }}"
+    - name: Ensure backup script is executable by root only
+      file:
+        path: "{{ base_dir }}/scripts/backup_volumes.sh"
         mode: '0700'
         owner: root
-      loop:
-        - "{{ base_dir }}/scripts/backup_volumes.sh"
-        - "{{ base_dir }}/scripts/dispatch_data_jobs.sh"
 
     # --- 3. DYNAMIC .J2 TEMPLATING ---
     - name: Find all .j2 templates in services directory locally

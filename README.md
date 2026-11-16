@@ -13,7 +13,7 @@ This project was built to transition a manual home networking setup into a resil
 
 * **End-to-End Event Alerting:** Integrated comprehensive Discord webhooks across the entire operational lifecycle. Real-time notifications (Success/Failure) are dispatched for CI/CD builds, app deployments, base container updates, and automated remote backups.
 > [!NOTE]
-> **CI/CD Evolution:** Hosted applications deploy autonomously via event-driven **GitHub Actions** pipelines (offsite builds on `ubuntu-24.04-arm` followed immediately by serialized edge deployments on self-hosted Raspberry Pi runners using host-level `flock` synchronization), while scheduled data pipelines (`country-trivia-web` AI generation and `prop-and-ferry` route/ferry scrapers) are triggered at `02:30 AM` (`America/New_York`) via a local Pi cron dispatching `deploy-orchestrator.yml`—eliminating legacy Jenkins JVM overhead, GitHub `schedule:` queue jitter, and resource lock contention on the Raspberry Pi.
+> **CI/CD Evolution:** Hosted applications deploy autonomously via event-driven **GitHub Actions** pipelines (offsite builds on `ubuntu-24.04-arm` followed immediately by serialized edge deployments on self-hosted Raspberry Pi runners using host-level `flock` synchronization), while scheduled data pipelines run autonomously inside dedicated in-app container schedulers (`trivia-scheduler` daily and `prop-ferry-scheduler` Wed/Sun at `02:30 AM` `America/New_York`)—eliminating legacy Jenkins JVM overhead, external cron orchestrators, GitHub `schedule:` queue jitter, and resource lock contention on the Raspberry Pi.
 > The legacy Jenkins infrastructure has been preserved for historical context in the [`archive/jenkins-pipeline`](https://github.com/rajivghandi767/homelab-iac/tree/archive/jenkins-pipeline) branch.
 
 ## 🚀 Hosted Production Workloads
@@ -63,7 +63,6 @@ The repository is organized by lifecycle boundaries to prevent state drift and s
 
 ```text
 📦 homelab-iac/
-├── ⚙️ .github/workflows/       # Scheduled data & manual fleet orchestrator workflow
 ├── 🗄️ ansible/                 # Core configuration management
 │   ├── 🔐 group_vars/          # Encrypted Vault variables and configs
 │   ├── 📋 inventory/           # Target Node definitions
@@ -71,7 +70,7 @@ The repository is organized by lifecycle boundaries to prevent state drift and s
 │   ├── 🧱 foundation.yml       # Provisions base OS and dependencies
 │   └── 🚑 restore.yml          # Zero-trust disaster recovery pipeline
 ├── 📚 docs/                    # Architectural and operational documentation
-├── 📜 scripts/                 # Bash utilities (backup_volumes.sh, dispatch_data_jobs.sh)
+├── 📜 scripts/                 # Bash utilities (backup_volumes.sh)
 ├── 🐳 services/                # Docker Compose definitions (The Stack)
 │   ├── 📦 apps/                # External application workloads
 │   ├── ⚙️ core/                # GitHub Actions, Nginx, Pihole, Vault, UniFi
