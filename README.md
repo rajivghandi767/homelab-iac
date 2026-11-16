@@ -20,10 +20,10 @@ This project was built to transition a manual home networking setup into a resil
 
 This infrastructure serves as the live production host for my active full-stack development portfolio. Each application lives in its own dedicated repository and is dynamically provisioned into the environment via the GitHub Actions CI/CD pipeline:
 
-*   **Country Trivia Game:** A full-stack Django/React application integrating Gemini AI to dynamically generate trivia questions and facts. It utilizes custom REST APIs and dedicated GitHub Actions pipelines for continuous data generation.
+*   **Country Trivia Game:** A full-stack Django/React application integrating Gemini AI to dynamically generate trivia questions and facts. It utilizes custom REST APIs and a dedicated containerized `trivia-scheduler` service for continuous daily data generation.
     *   [Play Live](https://trivia.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/country-trivia-web)
 
-*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes isolated GitHub Actions pipelines for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread.
+*   **Prop & Ferry:** A travel search and logistics platform using Django and TypeScript. It utilizes a dedicated containerized `prop-ferry-scheduler` service for scheduled, asynchronous web scraping and route data aggregation, decoupling heavy tasks from the main application thread.
     *   [Live Site](https://prop-ferry.rajivwallace.com) | [Source Code](https://github.com/rajivghandi767/prop-and-ferry)
 
 *   **Silicon Valley Trail:** A state-driven web game powered by a custom Django event engine that orchestrates location tracking, weather systems, and player actions, consumed by a Vite/React frontend.
@@ -43,7 +43,7 @@ This entire environment runs in production on a single bare-metal Raspberry Pi 4
 
 ### 📐 Capacity Planning & Sizing Philosophy
 
-The host node actively orchestrates **35 concurrent containers** (applications, data layers, edge runners, and observability) within a **4.2 GiB RAM footprint**, leaving **~3.5 GiB available** for the Linux kernel's buffer/cache and maintaining near-zero swap usage (<50 MiB). Rather than over-allocating resources, the stack is tuned for stability and predictable headroom:
+The host node actively orchestrates **33 concurrent containers** (applications, schedulers, data layers, edge runners, and observability) within a **~4.3 GiB RAM footprint**, leaving **~3.4 GiB available** for the Linux kernel's buffer/cache and maintaining near-zero swap usage (~77 MiB). Rather than over-allocating resources, the stack is tuned for stability and predictable headroom:
 
 * **Predictable Memory over Raw Thread Count:** Rather than configuring high worker counts that risk memory balloons on ARM hardware, each Django backend is standardized on **2 Gunicorn workers with 2 threads (`gthread`)** (~120–150MB RSS). While this intentionally caps un-cached in-flight concurrency to 4 requests per application, pairing it with Redis cache-aside keeps API latencies at **6–15ms**. By Little's Law ($N = \text{RPS} \times T$), the fleet's 16 combined threads comfortably sustain **250–350 RPS**—supporting **600–1,200 active concurrent users** at typical 2–5s human think times without premature horizontal scaling.
 * **Shared Data Multi-Tenancy:** A single PostgreSQL engine and volatile Redis instance serve all applications through isolated schemas, catalogs, and roles (`01-init-users.sh`). This eliminates over 600MB of idle memory compared to running separate database runtimes per app. We accept the shared failure domain because automated weekly backups and off-peak cron maintenance provide a resilient safety net.
