@@ -1,13 +1,18 @@
-name: Deployment Orchestrator
+name: Deployment & Data Orchestrator
 
 on:
-  schedule:
-    # Runs at 07:30 UTC (3:30 AM EDT / 2:30 AM EST) Daily
-    - cron: '30 7 * * *'
   workflow_dispatch:
     inputs:
+      MODE:
+        description: 'Execution Mode ("data-only" for nightly Pi cron, "deploy-and-data" for manual fleet deploy)'
+        required: true
+        default: 'data-only'
+        type: choice
+        options:
+          - data-only
+          - deploy-and-data
       TARGET_APP:
-        description: 'Target Application to Deploy (or "all")'
+        description: 'Target Application (or "all")'
         required: true
         default: 'all'
         type: choice
@@ -18,9 +23,13 @@ on:
           - prop-and-ferry
           - country-trivia-web
 
+concurrency:
+  group: homelab-orchestrator
+  cancel-in-progress: false
+
 jobs:
-  orchestrate-deployments:
-    name: Orchestrate Deployments
+  orchestrate:
+    name: Orchestrate Homelab Pipelines
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -34,9 +43,10 @@ jobs:
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-      - name: Run Sequential Deployments
+      - name: Run Sequential Pipelines
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          MODE: ${{ github.event.inputs.MODE || 'data-only' }}
           TARGET: ${{ github.event.inputs.TARGET_APP || 'all' }}
         run: |
           set -e
@@ -88,34 +98,38 @@ jobs:
             fi
           }
 
-          DAY_OF_WEEK=$(date +%u) # 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
+          # Evaluate day of week in America/New_York so 02:30 AM ET matches local Wed/Sun
+          DAY_OF_WEEK=$(TZ='America/New_York' date +%u) # 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat, 7=Sun
+          echo "🔎 Mode: $MODE | Target: $TARGET | America/New_York Day of Week: $DAY_OF_WEEK"
 
-          # 1. Portfolio Website
-          if [ "$TARGET" = "all" ] || [ "$TARGET" = "portfolio-website" ]; then
-            dispatch_and_wait "portfolio-website" "deploy.yml"
-          fi
-
-          # 2. Silicon Valley Trail
-          if [ "$TARGET" = "all" ] || [ "$TARGET" = "silicon-valley-trail" ]; then
-            dispatch_and_wait "silicon-valley-trail" "deploy.yml"
-          fi
-
-          # 3. Prop & Ferry
-          if [ "$TARGET" = "all" ] || [ "$TARGET" = "prop-and-ferry" ]; then
-            dispatch_and_wait "prop-and-ferry" "deploy.yml"
-
-            # Bi-weekly coordinate and live ferry scrapers (Wed=3, Sun=7)
-            if [ "$DAY_OF_WEEK" -eq 3 ] || [ "$DAY_OF_WEEK" -eq 7 ]; then
-              echo "📅 Bi-weekly schedule matched (Wed/Sun): running fetch_routes and scrape_ferries..."
-              dispatch_and_wait "prop-and-ferry" "fetch_routes.yml"
-              dispatch_and_wait "prop-and-ferry" "scrape_ferries.yml"
+          # 1. Optional Manual Fleet Deployment (when MODE=deploy-and-data)
+          if [ "$MODE" = "deploy-and-data" ]; then
+            if [ "$TARGET" = "all" ] || [ "$TARGET" = "portfolio-website" ]; then
+              dispatch_and_wait "portfolio-website" "deploy.yml"
+            fi
+            if [ "$TARGET" = "all" ] || [ "$TARGET" = "silicon-valley-trail" ]; then
+              dispatch_and_wait "silicon-valley-trail" "deploy.yml"
+            fi
+            if [ "$TARGET" = "all" ] || [ "$TARGET" = "prop-and-ferry" ]; then
+              dispatch_and_wait "prop-and-ferry" "deploy.yml"
+            fi
+            if [ "$TARGET" = "all" ] || [ "$TARGET" = "country-trivia-web" ]; then
+              dispatch_and_wait "country-trivia-web" "deploy.yml"
             fi
           fi
 
-          # 4. Country Trivia Web
+          # 2. Scheduled / On-Demand Data Pipelines
+          # Prop & Ferry: Bi-weekly flight & ferry scrapers on Wed (3) & Sun (7), or when explicitly targeted
+          if [ "$TARGET" = "prop-and-ferry" ] || { [ "$TARGET" = "all" ] && { [ "$DAY_OF_WEEK" -eq 3 ] || [ "$DAY_OF_WEEK" -eq 7 ]; }; }; then
+            echo "📅 Running Prop & Ferry route and ferry scrapers..."
+            dispatch_and_wait "prop-and-ferry" "fetch_routes.yml"
+            dispatch_and_wait "prop-and-ferry" "scrape_ferries.yml"
+          fi
+
+          # Country Trivia Web: Daily AI fun facts & quiz pool generation
           if [ "$TARGET" = "all" ] || [ "$TARGET" = "country-trivia-web" ]; then
-            dispatch_and_wait "country-trivia-web" "deploy.yml"
+            echo "🧠 Running Country Trivia Web AI data generation..."
             dispatch_and_wait "country-trivia-web" "data_generation.yml"
           fi
 
-          echo "🎉 All deployment checks and scheduled pipelines executed successfully."
+          echo "🎉 All requested orchestration tasks executed successfully."
