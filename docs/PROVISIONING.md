@@ -49,7 +49,7 @@ Ansible provisions the base OS packages on the Target Node, establishes the stri
 
 ## 4. CI/CD Orchestrator & Runner Authentication (GitHub Actions)
 
-The central deployment orchestrator workflow in `.github/workflows/deploy-orchestrator.yml` requires authentication to dispatch workflows across all application repositories:
+Application deployments run event-driven on push to `main` within each repository (`ci.yml` $\rightarrow$ `deploy.yml`), while `.github/workflows/deploy-orchestrator.yml` handles nightly `02:30 AM` (`America/New_York`) data pipelines (triggered via `/opt/homelab-iac/scripts/dispatch_data_jobs.sh` on the Target Node) and on-demand manual fleet deployments (`MODE=deploy-and-data`):
 
 1. **GitHub App Installation:** Ensure your dedicated GitHub App is installed across all homelab repositories (`homelab-iac`, `portfolio-website`, `silicon-valley-trail`, `prop-and-ferry`, `country-trivia-web`) with `Actions: Read and write` and `Contents: Read` permissions.
 2. **Configure Repository Secrets:** Add the following repository secrets to `homelab-iac`:
@@ -61,6 +61,6 @@ The central deployment orchestrator workflow in `.github/workflows/deploy-orches
 
 ## ⚖️ Provisioning Design & Security Posture
 
-* **Git-less Push Architecture:** The Target Node does not have git access, repository clones, or stored GitHub tokens. Ansible renders Jinja2 templates locally on the Control Node and pushes configurations over SSH (`rsync`). While this means the server cannot pull updates autonomously, it eliminates credential exposure on the edge—even if the physical server is breached, there are no repository tokens or git commit logs to compromise.
+* **Git-less Push Architecture:** The Target Node does not have git access, repository clones, or long-lived personal access tokens. Ansible renders Jinja2 templates locally on the Control Node and pushes configurations over SSH (`rsync`). Only the `root`-locked `/opt/homelab-iac/services/core/gha-runners/.env` (`0600`) holds the GitHub App ID and private key used by the ephemeral runner containers and the `02:30 AM` `dispatch_data_jobs.sh` cron script to mint short-lived (10-minute) installation tokens.
 * **Flash Storage Wear Mitigation:** Running continuous server workloads on a MicroSD card risks premature flash failure from swap thrashing and log accumulation. The `foundation.yml` playbook moves the 4GB swapfile to external USB 3.2 storage (`/mnt/media/swapfile`), points Docker's `data-root` to `/mnt/dockerdata`, and enforces strict container log rotation (`10m`, 3 files). We deliberately accept wear on cheap, replaceable external storage to protect the core OS boot filesystem.
 * **Least-Privilege File Permissions (`0600`):** Sensitive files rendered by Ansible (`.env`, `gcp-kms.json`) are locked down to `owner: root` and `mode: 0600`, preventing unprivileged containers and processes from reading host secrets.

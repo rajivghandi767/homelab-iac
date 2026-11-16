@@ -2,6 +2,8 @@
 - name: Provision Homelab Foundation
   hosts: all
   become: yes
+  vars_files:
+    - group_vars/all/config.yml
   vars:
     ansible_python_interpreter: /usr/bin/python3
     
@@ -94,6 +96,10 @@
         - { path: '{{ base_dir }}/backups/downloads', mode: '0700' }
         - { path: '{{ base_dir }}/backups/logs', mode: '0700' } 
 
+    - name: Set host system timezone for deterministic cron scheduling
+      community.general.timezone:
+        name: "{{ timezone }}"
+
     - name: Schedule automated volume backups
       cron:
         name: "Homelab Volume Backup"
@@ -101,6 +107,14 @@
         hour: "0"
         weekday: "1"
         job: "{{ base_dir }}/scripts/backup_volumes.sh >> {{ base_dir }}/backups/logs/homelab_backup.log 2>&1"
+        user: root
+
+    - name: Schedule nightly data generation and route scraping dispatch
+      cron:
+        name: "Homelab Nightly Data Jobs Dispatch"
+        minute: "30"
+        hour: "2"
+        job: "{{ base_dir }}/scripts/dispatch_data_jobs.sh >> {{ base_dir }}/backups/logs/homelab_data_dispatch.log 2>&1"
         user: root
 
     - name: Generate Global Scripts Environment File
@@ -139,11 +153,14 @@
         group: no
         perms: no
         
-    - name: Ensure backup script is executable by root only
+    - name: Ensure host scripts are executable by root only
       ansible.builtin.file:
-        path: "{{ base_dir }}/scripts/backup_volumes.sh"
+        path: "{{ item }}"
         mode: '0700'
         owner: root
+      loop:
+        - "{{ base_dir }}/scripts/backup_volumes.sh"
+        - "{{ base_dir }}/scripts/dispatch_data_jobs.sh"
 
     # --- 3. DYNAMIC .J2 TEMPLATING ---
     - name: Find all .j2 templates in services directory locally
@@ -166,11 +183,11 @@
       loop: "{{ j2_templates.files }}"
       no_log: "{{ not (show_secrets | default(false) | bool) }}"
       
-    - name: Configure logrotate for homelab backup log
+    - name: Configure logrotate for homelab cron logs
       copy:
         dest: /etc/logrotate.d/homelab_backup
         content: |
-          {{ base_dir }}/backups/logs/homelab_backup.log {
+          {{ base_dir }}/backups/logs/*.log {
               weekly
               rotate 2
               compress
